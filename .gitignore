@@ -1,0 +1,23 @@
+# Binarios
+pkgsh
+dist/
+
+# Artefactos de build
+*.deb
+*.tar.gz
+
+# Go
+vendor/
+*.test
+*.out
+coverage.html
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

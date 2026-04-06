@@ -1,0 +1,25 @@
+name: pkgsh
+arch: amd64
+platform: linux
+version: ${VERSION}
+maintainer: Hector Bustos
+description: Gestor unificado de paquetes para Ubuntu/Debian con TUI
+homepage: https://github.com/hbustos/pkgsh
+license: MIT
+
+contents:
+  - src: pkgsh
+    dst: /usr/local/bin/pkgsh
+    file_info:
+      mode: 0755
+
+  - src: docs/pkgsh.1
+    dst: /usr/share/man/man1/pkgsh.1
+    packager: deb
+
+scripts:
+  postinstall: scripts/postinstall.sh
+
+deb:
+  fields:
+    Depends: sudo
