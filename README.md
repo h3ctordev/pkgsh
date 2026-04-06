@@ -3,21 +3,21 @@
 Gestor unificado de paquetes para Ubuntu/Debian con interfaz TUI. Abstrae apt, snap, flatpak, dpkg, pip, npm y AppImage en una sola experiencia de terminal.
 
 ```
-┌─ pkgsh ──────────────────────────────────────────────────────────────────────────┐
+┌─ pkgsh ─────────────────────────────────────────────────────────────────────────────┐
 │ [1] Todos  [2] apt  [3] snap  [4] flatpak  [5] dpkg  [6] pip  [7] npm  [8] AppImage │
-├──────────────────────────────────┬───────────────────────────────────────────────┤
-│ > Buscar: ___________________    │  DETALLE                                      │
-├──────────────────────────────────┤  Nombre:   firefox                            │
-│ ☐ firefox          apt  126.0 ↑  │  Versión:  126.0.1                            │
-│ ☐ snapd            snap  2.63    │  Origen:   apt (ubuntu)                       │
-│ ☒ vlc              apt  3.0.2    │  Tamaño:   234 MB                             │
-│ ☒ node             npm  20.1     │  Nativo:   Sí                                 │
-│ ☐ spotify          snap  1.2     │  Desc:     Web browser                        │
-├──────────────────────────────────┴───────────────────────────────────────────────┤
-│ LOG OUTPUT                                                                        │
-│ Removing vlc... done.                                                             │
-└──────────────────────────────────────────────────────────────────────────────────┘
-│ [/] Buscar  [Tab] Panel  [Space] Sel  [d] Desinstalar  [u] Actualizar  [q] Salir  │
+├──────────────────────────────────┬──────────────────────────────────────────────────┤
+│ > Buscar: ___________________    │  DETALLE                                         │
+├──────────────────────────────────┤  Nombre:   firefox                               │
+│ ☐ firefox          apt  126.0 ↑  │  Versión:  126.0.1                               │
+│ ☐ snapd            snap  2.63    │  Origen:   apt (ubuntu)                          │
+│ ☒ vlc              apt  3.0.2    │  Tamaño:   234 MB                                │
+│ ☒ node             npm  20.1     │  Nativo:   Sí                                    │
+│ ☐ spotify          snap  1.2     │  Desc:     Web browser                           │
+├──────────────────────────────────┴──────────────────────────────────────────────────┤
+│ LOG OUTPUT                                                                          │
+│ Removing vlc... done.                                                               │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+│ [/] Buscar  [Tab] Panel  [Space] Sel  [d] Desinstalar  [u] Actualizar  [q] Salir    │
 ```
 
 ## Instalación
