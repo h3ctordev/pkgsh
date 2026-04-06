@@ -19,34 +19,97 @@ Esta guía cubre la configuración completa del repositorio en GitHub para garan
 
 ## 1. Protección de ramas
 
-Ir a **Settings → Branches → Add branch ruleset** y configurar para `master`:
+Este repositorio usa el sistema de **GitHub Rulesets** (Settings → Rules → Rulesets), que es la API moderna de protección de ramas y reemplaza al sistema clásico de branch protection.
 
-### Reglas obligatorias
+> **Importante:** No usar la API clásica `/branches/{branch}/protection` — las reglas creadas ahí aparecen bajo Settings → Branches (UI antigua) y no en la UI de Rulesets.
+
+### Reglas configuradas en `master`
 
 | Regla | Valor | Por qué |
 |---|---|---|
 | Require a pull request before merging | ✅ | Nadie, ni el owner, puede push directo |
-| Required approvals | 1 | Al menos una revisión antes de mergear |
-| Dismiss stale pull request approvals when new commits are pushed | ✅ | Un nuevo commit invalida aprobaciones anteriores |
-| Require status checks to pass | ✅ | CI debe pasar antes de mergear |
-| Require branches to be up to date before merging | ✅ | Sin merges con código desactualizado |
-| Do not allow bypassing the above settings | ✅ | El owner tampoco puede saltarse las reglas |
-| Restrict who can push to matching branches | Solo tú (maintainer) | Nadie más puede push a master |
-| Allow force pushes | ❌ | Protege el historial |
-| Allow deletions | ❌ | Nadie puede borrar master |
+| Required approvals | 0 | Solo maintainer activo, sin equipo externo aún |
+| Dismiss stale reviews on push | ✅ | Un nuevo commit invalida aprobaciones anteriores |
+| Require status checks to pass | ✅ (si hay CI activo) | CI debe pasar antes de mergear |
+| Require branches to be up to date | ✅ | Sin merges con código desactualizado |
+| Block force pushes | ✅ | Protege el historial |
+| Restrict deletions | ✅ | Nadie puede borrar master |
 
-### Cómo hacerlo vía gh CLI
+### Crear el Ruleset vía gh CLI
 
 ```bash
-gh api repos/h3ctordev/pkgsh/branches/master/protection \
-  --method PUT \
-  --field required_status_checks='{"strict":true,"contexts":["build (linux, amd64, amd64)","build (linux, arm64, arm64)"]}' \
-  --field enforce_admins=true \
-  --field required_pull_request_reviews='{"required_approving_review_count":1,"dismiss_stale_reviews":true}' \
-  --field restrictions=null
+gh api repos/h3ctordev/pkgsh/rulesets \
+  --method POST \
+  --input - <<'EOF'
+{
+  "name": "protect-master",
+  "target": "branch",
+  "enforcement": "active",
+  "conditions": {
+    "ref_name": {
+      "include": ["refs/heads/master"],
+      "exclude": []
+    }
+  },
+  "rules": [
+    { "type": "deletion" },
+    { "type": "non_fast_forward" },
+    {
+      "type": "pull_request",
+      "parameters": {
+        "required_approving_review_count": 0,
+        "dismiss_stale_reviews_on_push": true,
+        "require_code_owner_review": false,
+        "require_last_push_approval": false,
+        "required_review_thread_resolution": false
+      }
+    }
+  ]
+}
+EOF
 ```
 
-> **Nota:** Los nombres de los `contexts` deben coincidir exactamente con los jobs definidos en `.github/workflows/release.yml`. Verifica los nombres reales tras el primer run de CI.
+> **Nota:** `required_approving_review_count: 0` significa que se requiere abrir un PR pero no necesita aprobación externa — útil cuando aún no hay reviewers adicionales. Cuando el equipo crezca, subir este valor a `1`.
+
+### Actualizar el Ruleset existente
+
+Para modificar el Ruleset (p. ej. subir las aprobaciones requeridas a 1):
+
+```bash
+# Primero obtener el ID del ruleset
+gh api repos/h3ctordev/pkgsh/rulesets
+
+# Luego hacer PATCH con el ID
+gh api repos/h3ctordev/pkgsh/rulesets/<ID> \
+  --method PUT \
+  --input - <<'EOF'
+{
+  "name": "protect-master",
+  "target": "branch",
+  "enforcement": "active",
+  "conditions": {
+    "ref_name": {
+      "include": ["refs/heads/master"],
+      "exclude": []
+    }
+  },
+  "rules": [
+    { "type": "deletion" },
+    { "type": "non_fast_forward" },
+    {
+      "type": "pull_request",
+      "parameters": {
+        "required_approving_review_count": 1,
+        "dismiss_stale_reviews_on_push": true,
+        "require_code_owner_review": false,
+        "require_last_push_approval": false,
+        "required_review_thread_resolution": false
+      }
+    }
+  ]
+}
+EOF
+```
 
 ---
 
@@ -222,7 +285,7 @@ Completar estos pasos una sola vez al configurar el repositorio:
 
 ### GitHub Settings
 
-- [ ] **Branch protection** activada en `master` (ver sección 1)
+- [ ] **Ruleset `protect-master`** creado y activo en `master` (ver sección 1)
 - [ ] **Actions permissions** configuradas (ver sección 2)
 - [ ] **Workflow permissions:** Read and write
 - [ ] Verificar que el primer run de CI pasa
