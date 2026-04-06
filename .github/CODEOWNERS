@@ -1,0 +1,7 @@
+# Owner global — revisor automático de todos los PRs
+*                          @h3ctordev
+
+# Capas críticas — siempre requieren revisión del owner
+internal/domain/           @h3ctordev
+.github/                   @h3ctordev
+cmd/                       @h3ctordev
