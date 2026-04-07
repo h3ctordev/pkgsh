@@ -274,18 +274,26 @@ func (m AppModel) View() string {
 		return "Iniciando pkgsh..."
 	}
 
-	topHeight := (m.height - 3) * 6 / 10
-	logHeight := (m.height - 3) - topHeight
-	if logHeight < 4 {
-		logHeight = 4
+	// Filas consumidas por elementos fuera de los paneles:
+	// header(1) + searchBar(1) + bordes lista(2) + bordes log(2) + footer(1) = 7
+	available := m.height - 7
+	if available < 10 {
+		available = 10
+	}
+	topHeight := available * 3 / 5 // 60% para lista+detalle
+	logHeight := available - topHeight
+	if logHeight < 3 {
+		logHeight = 3
+		topHeight = available - logHeight
 	}
 	listWidth := m.width * 4 / 10
 	detailWidth := m.width - listWidth
 
 	header := m.viewHeader()
 	searchBar := m.viewSearchBar(listWidth)
-	listView := m.list.View(listWidth, topHeight-1, m.state.ActivePanel == domain.PanelList)
-	detailView := m.detail.View(m.list.CurrentPackage(), detailWidth, topHeight, m.state.ActivePanel == domain.PanelDetail)
+	// El panel detalle no tiene searchBar encima, así que tiene 1 fila extra de contenido
+	listView := m.list.View(listWidth, topHeight, m.state.ActivePanel == domain.PanelList)
+	detailView := m.detail.View(m.list.CurrentPackage(), detailWidth, topHeight+1, m.state.ActivePanel == domain.PanelDetail)
 
 	body := lipgloss.JoinHorizontal(lipgloss.Top,
 		lipgloss.JoinVertical(lipgloss.Left, searchBar, listView),
@@ -336,7 +344,8 @@ func (m AppModel) viewHeader() string {
 	return lipgloss.NewStyle().
 		Width(m.width).
 		Padding(0, 1).
-		Background(lipgloss.Color("235")).
+		Background(lipgloss.Color("237")).
+		Foreground(lipgloss.Color("250")).
 		Render(title + "  " + strings.Join(parts, "  "))
 }
 
