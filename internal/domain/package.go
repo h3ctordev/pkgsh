@@ -24,6 +24,7 @@ type Package struct {
 	IsNative    bool
 	Origin      string
 	InstallDate time.Time
+	Path        string
 }
 
 type PackageManager interface {
