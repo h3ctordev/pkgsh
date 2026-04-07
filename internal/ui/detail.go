@@ -29,6 +29,10 @@ func (dm DetailModel) View(pkg *domain.Package, width, height int, active bool) 
 		native = "Sí"
 	}
 
+	path := pkg.Path
+	if path == "" {
+		path = "(desconocido)"
+	}
 	lines := []string{
 		label("Nombre:      ") + pkg.Name,
 		label("Versión:     ") + pkg.Version,
@@ -37,6 +41,7 @@ func (dm DetailModel) View(pkg *domain.Package, width, height int, active bool) 
 		label("Tamaño:      ") + formatSize(pkg.Size),
 		label("Nativo:      ") + native,
 		label("Origen:      ") + pkg.Origin,
+		label("Ruta:        ") + path,
 		"",
 		label("Descripción:"),
 		pkg.Description,
@@ -62,7 +67,7 @@ func detailPanelStyle(active bool, width, height int) lipgloss.Style {
 		Width(width - 2).
 		Height(height).
 		Border(lipgloss.RoundedBorder()).
-		Padding(0, 1)
+		Padding(1, 2)
 	if active {
 		s = s.BorderForeground(lipgloss.Color("86"))
 	}

@@ -97,7 +97,8 @@ func (lm ListModel) View(width, height int, active bool) string {
 		return style.Render(lipgloss.NewStyle().Faint(true).Render("Sin paquetes"))
 	}
 
-	visible := height - 2
+	// -2 bordes, -2 header+separador
+	visible := height - 4
 	if visible < 1 {
 		visible = 1
 	}
@@ -111,7 +112,23 @@ func (lm ListModel) View(width, height int, active bool) string {
 		end = len(lm.items)
 	}
 
-	var rows []string
+	// Anchos de columna: nombre=24, versión=12, gestor=10, actualizable=2
+	colName := 24
+	colVer := 12
+	colMgr := 10
+
+	header := fmt.Sprintf("  %-*s  %-*s  %-*s  %s",
+		colName+2, "Paquete",
+		colVer, "Versión",
+		colMgr, "Gestor",
+		"Upd",
+	)
+	sep := strings.Repeat("─", width-4)
+	rows := []string{
+		lipgloss.NewStyle().Faint(true).Render(header),
+		lipgloss.NewStyle().Faint(true).Render(sep),
+	}
+
 	for i := start; i < end; i++ {
 		pkg := lm.items[i]
 		checkbox := "☐"
@@ -126,11 +143,11 @@ func (lm ListModel) View(width, height int, active bool) string {
 		if pkg.NewVersion != "" {
 			upd = "↑"
 		}
-		row := fmt.Sprintf("%s %s %-28s %-8s %-10s %s",
-			cur, checkbox,
-			truncate(pkg.Name, 28),
-			string(pkg.Manager),
-			pkg.Version,
+		nameCol := fmt.Sprintf("%s %s %s", cur, checkbox, truncate(pkg.Name, colName))
+		row := fmt.Sprintf("%-*s  %-*s  %-*s  %s",
+			colName+4, nameCol,
+			colVer, truncate(pkg.Version, colVer),
+			colMgr, string(pkg.Manager),
 			upd,
 		)
 		if i == lm.cursor {

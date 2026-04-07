@@ -150,6 +150,9 @@ func (m AppModel) updateSearch(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 func (m AppModel) updateKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.Type {
+	case tea.KeyCtrlC:
+		return m, tea.Quit
+
 	case tea.KeyTab:
 		m.state.ActivePanel = (m.state.ActivePanel + 1) % 3
 		return m, nil
@@ -286,7 +289,7 @@ func (m AppModel) View() string {
 		logHeight = 3
 		topHeight = available - logHeight
 	}
-	listWidth := m.width * 4 / 10
+	listWidth := m.width * 2 / 3
 	detailWidth := m.width - listWidth
 
 	header := m.viewHeader()
