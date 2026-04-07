@@ -1,6 +1,9 @@
 package domain
 
-import "strings"
+import (
+	"sort"
+	"strings"
+)
 
 type SortField int
 
@@ -43,4 +46,22 @@ func Filter(pkgs []Package, query string, manager ManagerType) []Package {
 		out = append(out, p)
 	}
 	return out
+}
+
+func Sort(pkgs []Package, by SortField) []Package {
+	sorted := make([]Package, len(pkgs))
+	copy(sorted, pkgs)
+	sort.SliceStable(sorted, func(i, j int) bool {
+		switch by {
+		case SortByManager:
+			return string(sorted[i].Manager) < string(sorted[j].Manager)
+		case SortByVersion:
+			return sorted[i].Version < sorted[j].Version
+		case SortBySize:
+			return sorted[i].Size > sorted[j].Size
+		default: // SortByName
+			return strings.ToLower(sorted[i].Name) < strings.ToLower(sorted[j].Name)
+		}
+	})
+	return sorted
 }
