@@ -48,9 +48,19 @@ func main() {
 		Search:      *searchFlag,
 	}
 
-	pkgs := loadPackages()
+	adapterMap := map[domain.ManagerType]domain.PackageManager{
+		domain.ManagerApt:      apt.New(),
+		domain.ManagerSnap:     snap.New(),
+		domain.ManagerFlatpak:  flatpak.New(),
+		domain.ManagerDpkg:     dpkg.New(),
+		domain.ManagerPip:      pip.New(),
+		domain.ManagerNpm:      npm.New(),
+		domain.ManagerAppImage: appimage.New(),
+	}
 
-	p := tea.NewProgram(ui.New(pkgs, opts), tea.WithAltScreen())
+	pkgs := loadPackages(adapterMap)
+
+	p := tea.NewProgram(ui.New(pkgs, adapterMap, opts), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
@@ -58,20 +68,20 @@ func main() {
 }
 
 // loadPackages ejecuta todos los adapters en paralelo y combina los resultados.
-// Los errores por adapter no disponible se ignoran silenciosamente (el gestor puede no estar instalado).
-func loadPackages() []domain.Package {
-	managers := []domain.PackageManager{
-		apt.New(),
-		snap.New(),
-		flatpak.New(),
-		dpkg.New(),
-		pip.New(),
-		npm.New(),
-		appimage.New(),
-	}
-
+// Los errores por adapter no disponible se ignoran silenciosamente.
+func loadPackages(adapters map[domain.ManagerType]domain.PackageManager) []domain.Package {
 	type result struct {
 		pkgs []domain.Package
+	}
+
+	managers := []domain.PackageManager{
+		adapters[domain.ManagerApt],
+		adapters[domain.ManagerSnap],
+		adapters[domain.ManagerFlatpak],
+		adapters[domain.ManagerDpkg],
+		adapters[domain.ManagerPip],
+		adapters[domain.ManagerNpm],
+		adapters[domain.ManagerAppImage],
 	}
 
 	results := make([]result, len(managers))
