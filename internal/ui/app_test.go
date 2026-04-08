@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -193,6 +195,53 @@ func TestApp_ConfirmDelete_StartsOperation(t *testing.T) {
 	}
 	if cmd == nil {
 		t.Fatal("expected readLineCmd to be returned")
+	}
+}
+
+func TestApp_OperationDone_ChainsNext(t *testing.T) {
+	pkgs1 := []domain.Package{{Name: "vim", Manager: domain.ManagerApt, Version: "1.0"}}
+	pkgs2 := []domain.Package{{Name: "lodash", Manager: domain.ManagerNpm, Version: "4.0"}}
+	adapterMap := map[domain.ManagerType]domain.PackageManager{
+		domain.ManagerApt: &fakeAdapter{manager: domain.ManagerApt, output: "apt done"},
+		domain.ManagerNpm: &fakeAdapter{manager: domain.ManagerNpm, output: "npm done"},
+	}
+	app := New(append(pkgs1, pkgs2...), adapterMap, Options{})
+	// Simular que ya arrancó la primera op y queda una pendiente
+	app.pendingOps = []pendingOp{{manager: domain.ManagerNpm, pkgs: pkgs2}}
+	app.currentManager = domain.ManagerApt
+	app.state.Operation = domain.NewOperation()
+
+	// Simular que terminó sin error
+	model, cmd := app.Update(operationDoneMsg{err: nil})
+	app = model.(AppModel)
+
+	// Debe haber arrancado la siguiente
+	if app.state.Operation == nil {
+		t.Fatal("expected second operation to start")
+	}
+	if cmd == nil {
+		t.Fatal("expected readLineCmd for second operation")
+	}
+}
+
+func TestApp_OperationDone_LogsError(t *testing.T) {
+	app := New(nil, nil, Options{})
+	app.currentManager = domain.ManagerApt
+	app.state.Operation = domain.NewOperation()
+	app.pendingOps = []pendingOp{} // cola vacía
+
+	opErr := fmt.Errorf("permission denied")
+	model, _ := app.Update(operationDoneMsg{err: opErr})
+	app = model.(AppModel)
+
+	found := false
+	for _, line := range app.log.Lines() {
+		if strings.Contains(line, "[ERROR]") && strings.Contains(line, "permission denied") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected [ERROR] line in log, got %v", app.log.Lines())
 	}
 }
 

@@ -111,8 +111,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, readLineCmd(m.state.Operation)
 
 	case operationDoneMsg:
+		if msg.err != nil {
+			m.log = m.log.appendLine(fmt.Sprintf("[ERROR] %s: %v", m.currentManager, msg.err))
+		}
 		m.state.Operation = nil
-		return m, nil
+		var cmd tea.Cmd
+		m, cmd = m.startNextOp()
+		return m, cmd
 
 	case tea.KeyMsg:
 		if m.searching {
