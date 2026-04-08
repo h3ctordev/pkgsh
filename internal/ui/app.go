@@ -17,18 +17,34 @@ type Options struct {
 	Search      string
 }
 
-type AppModel struct {
-	state     domain.AppState
-	list      ListModel
-	detail    DetailModel
-	log       LogModel
-	modal     *ModalModel
-	searching bool
-	width     int
-	height    int
+type opKind int
+
+const (
+	opRemove opKind = iota
+	opUpdate
+)
+
+type pendingOp struct {
+	manager domain.ManagerType
+	pkgs    []domain.Package
 }
 
-func New(pkgs []domain.Package, opts Options) AppModel {
+type AppModel struct {
+	state          domain.AppState
+	list           ListModel
+	detail         DetailModel
+	log            LogModel
+	modal          *ModalModel
+	searching      bool
+	width          int
+	height         int
+	adapters       map[domain.ManagerType]domain.PackageManager
+	pendingOps     []pendingOp
+	currentKind    opKind
+	currentManager domain.ManagerType
+}
+
+func New(pkgs []domain.Package, adapters map[domain.ManagerType]domain.PackageManager, opts Options) AppModel {
 	state := domain.AppState{
 		Packages:    pkgs,
 		Selected:    make(map[int]bool),
@@ -49,10 +65,11 @@ func New(pkgs []domain.Package, opts Options) AppModel {
 	state.Filtered = filtered
 
 	return AppModel{
-		state:  state,
-		list:   newListModel().SetItems(filtered),
-		detail: newDetailModel(),
-		log:    newLogModel(),
+		state:    state,
+		list:     newListModel().SetItems(filtered),
+		detail:   newDetailModel(),
+		log:      newLogModel(),
+		adapters: adapters,
 	}
 }
 
@@ -94,8 +111,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, readLineCmd(m.state.Operation)
 
 	case operationDoneMsg:
+		if msg.err != nil {
+			m.log = m.log.appendLine(fmt.Sprintf("[ERROR] %s: %v", m.currentManager, msg.err))
+		}
 		m.state.Operation = nil
-		return m, nil
+		var cmd tea.Cmd
+		m, cmd = m.startNextOp()
+		return m, cmd
 
 	case tea.KeyMsg:
 		if m.searching {
@@ -116,9 +138,28 @@ func (m AppModel) updateModal(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if confirmed {
 		switch updated.modalType {
 		case ModalConfirm:
-			m.log = m.log.appendLine("Operación iniciada (mock)")
+			sel := m.list.AllSelected(m.state.Packages)
 			m.list = m.list.ClearSelection()
 			m.modal = nil
+
+			// Agrupar por manager en orden canónico
+			order := []domain.ManagerType{
+				domain.ManagerApt, domain.ManagerSnap, domain.ManagerFlatpak,
+				domain.ManagerDpkg, domain.ManagerPip, domain.ManagerNpm, domain.ManagerAppImage,
+			}
+			byManager := make(map[domain.ManagerType][]domain.Package)
+			for _, p := range sel {
+				byManager[p.Manager] = append(byManager[p.Manager], p)
+			}
+			for _, mgr := range order {
+				if pkgs, ok := byManager[mgr]; ok {
+					m.pendingOps = append(m.pendingOps, pendingOp{manager: mgr, pkgs: pkgs})
+				}
+			}
+
+			var cmd tea.Cmd
+			m, cmd = m.startNextOp()
+			return m, cmd
 		case ModalSudo:
 			m.modal = nil
 		case ModalQuitConfirm:
@@ -209,6 +250,7 @@ func (m AppModel) updateKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			if len(sel) == 0 {
 				return m, nil
 			}
+			m.currentKind = opRemove
 			modal := newConfirmModal(
 				fmt.Sprintf("Desinstalar %d paquete(s)", len(sel)),
 				strings.Join(packageNames(sel), ", "),
@@ -220,6 +262,7 @@ func (m AppModel) updateKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			if len(sel) == 0 {
 				return m, nil
 			}
+			m.currentKind = opUpdate
 			modal := newConfirmModal(
 				fmt.Sprintf("Actualizar %d paquete(s)", len(sel)),
 				strings.Join(packageNames(sel), ", "),
@@ -262,6 +305,35 @@ func (m AppModel) applyFilter() AppModel {
 	m.state.Filtered = filtered
 	m.list = m.list.SetItems(filtered)
 	return m
+}
+
+// startNextOp toma la primera op de pendingOps, arranca la operación y devuelve readLineCmd.
+// Si la cola está vacía, loguea "Listo." y devuelve nil.
+// Si el adapter del manager no existe, loguea [SKIP] y pasa a la siguiente.
+func (m AppModel) startNextOp() (AppModel, tea.Cmd) {
+	for len(m.pendingOps) > 0 {
+		op := m.pendingOps[0]
+		m.pendingOps = m.pendingOps[1:]
+
+		adapter, ok := m.adapters[op.manager]
+		if !ok {
+			m.log = m.log.appendLine(fmt.Sprintf("[SKIP] %s: adapter no disponible", op.manager))
+			continue
+		}
+
+		m.currentManager = op.manager
+		var operation *domain.Operation
+		if m.currentKind == opRemove {
+			operation = adapter.Remove(op.pkgs)
+		} else {
+			operation = adapter.Update(op.pkgs)
+		}
+		m.state.Operation = operation
+		return m, readLineCmd(operation)
+	}
+
+	m.log = m.log.appendLine("Listo.")
+	return m, nil
 }
 
 func packageNames(pkgs []domain.Package) []string {
