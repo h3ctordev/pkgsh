@@ -17,18 +17,34 @@ type Options struct {
 	Search      string
 }
 
-type AppModel struct {
-	state     domain.AppState
-	list      ListModel
-	detail    DetailModel
-	log       LogModel
-	modal     *ModalModel
-	searching bool
-	width     int
-	height    int
+type opKind int
+
+const (
+	opRemove opKind = iota
+	opUpdate
+)
+
+type pendingOp struct {
+	manager domain.ManagerType
+	pkgs    []domain.Package
 }
 
-func New(pkgs []domain.Package, opts Options) AppModel {
+type AppModel struct {
+	state          domain.AppState
+	list           ListModel
+	detail         DetailModel
+	log            LogModel
+	modal          *ModalModel
+	searching      bool
+	width          int
+	height         int
+	adapters       map[domain.ManagerType]domain.PackageManager
+	pendingOps     []pendingOp
+	currentKind    opKind
+	currentManager domain.ManagerType
+}
+
+func New(pkgs []domain.Package, adapters map[domain.ManagerType]domain.PackageManager, opts Options) AppModel {
 	state := domain.AppState{
 		Packages:    pkgs,
 		Selected:    make(map[int]bool),
@@ -49,10 +65,11 @@ func New(pkgs []domain.Package, opts Options) AppModel {
 	state.Filtered = filtered
 
 	return AppModel{
-		state:  state,
-		list:   newListModel().SetItems(filtered),
-		detail: newDetailModel(),
-		log:    newLogModel(),
+		state:    state,
+		list:     newListModel().SetItems(filtered),
+		detail:   newDetailModel(),
+		log:      newLogModel(),
+		adapters: adapters,
 	}
 }
 

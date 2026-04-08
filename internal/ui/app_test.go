@@ -8,7 +8,7 @@ import (
 )
 
 func makeApp(pkgs []domain.Package) AppModel {
-	return New(pkgs, Options{})
+	return New(pkgs, nil, Options{})
 }
 
 func TestApp_PanelSwitching(t *testing.T) {
