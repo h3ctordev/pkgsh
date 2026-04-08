@@ -12,19 +12,25 @@ import (
 type ListModel struct {
 	items    []domain.Package
 	cursor   int
-	selected map[int]bool
+	selected map[string]bool // clave: "name:manager" — persiste entre filtros
+}
+
+// pkgKey devuelve la clave de identidad de un paquete.
+func pkgKey(p domain.Package) string {
+	return p.Name + ":" + string(p.Manager)
 }
 
 func newListModel() ListModel {
-	return ListModel{selected: make(map[int]bool)}
+	return ListModel{selected: make(map[string]bool)}
 }
 
 func (lm ListModel) Cursor() int { return lm.cursor }
 
+// SetItems actualiza los items visibles y resetea el cursor.
+// La selección se preserva — las claves por nombre+gestor sobreviven al filtro.
 func (lm ListModel) SetItems(pkgs []domain.Package) ListModel {
 	lm.items = pkgs
 	lm.cursor = 0
-	lm.selected = make(map[int]bool)
 	return lm
 }
 
@@ -32,33 +38,50 @@ func (lm ListModel) ToggleSelected() ListModel {
 	if len(lm.items) == 0 {
 		return lm
 	}
-	sel := make(map[int]bool, len(lm.selected))
+	sel := make(map[string]bool, len(lm.selected))
 	for k, v := range lm.selected {
 		sel[k] = v
 	}
-	sel[lm.cursor] = !sel[lm.cursor]
+	key := pkgKey(lm.items[lm.cursor])
+	sel[key] = !sel[key]
 	lm.selected = sel
 	return lm
 }
 
 func (lm ListModel) SelectAll() ListModel {
-	sel := make(map[int]bool, len(lm.items))
-	for i := range lm.items {
-		sel[i] = true
+	sel := make(map[string]bool, len(lm.selected)+len(lm.items))
+	for k, v := range lm.selected {
+		sel[k] = v
+	}
+	for _, p := range lm.items {
+		sel[pkgKey(p)] = true
 	}
 	lm.selected = sel
 	return lm
 }
 
 func (lm ListModel) ClearSelection() ListModel {
-	lm.selected = make(map[int]bool)
+	lm.selected = make(map[string]bool)
 	return lm
 }
 
+// SelectedPackages devuelve los paquetes seleccionados visibles (items actuales).
 func (lm ListModel) SelectedPackages() []domain.Package {
 	var out []domain.Package
-	for i, pkg := range lm.items {
-		if lm.selected[i] {
+	for _, pkg := range lm.items {
+		if lm.selected[pkgKey(pkg)] {
+			out = append(out, pkg)
+		}
+	}
+	return out
+}
+
+// AllSelected devuelve todos los paquetes seleccionados del listado completo,
+// incluyendo los que no son visibles en el filtro activo.
+func (lm ListModel) AllSelected(all []domain.Package) []domain.Package {
+	var out []domain.Package
+	for _, pkg := range all {
+		if lm.selected[pkgKey(pkg)] {
 			out = append(out, pkg)
 		}
 	}
@@ -132,7 +155,7 @@ func (lm ListModel) View(width, height int, active bool) string {
 	for i := start; i < end; i++ {
 		pkg := lm.items[i]
 		checkbox := "☐"
-		if lm.selected[i] {
+		if lm.selected[pkgKey(pkg)] {
 			checkbox = "☒"
 		}
 		cur := " "
