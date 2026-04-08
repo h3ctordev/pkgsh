@@ -160,6 +160,42 @@ func TestApp_StartNextOp_EmptyQueue(t *testing.T) {
 	}
 }
 
+func TestApp_ConfirmDelete_StartsOperation(t *testing.T) {
+	pkgs := []domain.Package{
+		{Name: "vim", Manager: domain.ManagerApt, Version: "1.0"},
+	}
+	adapters := map[domain.ManagerType]domain.PackageManager{
+		domain.ManagerApt: &fakeAdapter{manager: domain.ManagerApt, output: "ok"},
+	}
+	app := New(pkgs, adapters, Options{})
+	// Seleccionar vim
+	app.list = app.list.ToggleSelected()
+
+	// Presionar 'd' → abre modal
+	model, _ := app.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}})
+	app = model.(AppModel)
+	if app.modal == nil {
+		t.Fatal("expected modal to open")
+	}
+	if app.currentKind != opRemove {
+		t.Fatal("expected currentKind = opRemove")
+	}
+
+	// Confirmar con 'y'
+	model, cmd := app.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}})
+	app = model.(AppModel)
+
+	if app.modal != nil {
+		t.Fatal("expected modal to close after confirm")
+	}
+	if app.state.Operation == nil {
+		t.Fatal("expected Operation to be set after confirm")
+	}
+	if cmd == nil {
+		t.Fatal("expected readLineCmd to be returned")
+	}
+}
+
 // fakeAdapter implementa domain.PackageManager con output configurable para tests.
 type fakeAdapter struct {
 	manager domain.ManagerType

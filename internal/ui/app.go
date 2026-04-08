@@ -133,9 +133,28 @@ func (m AppModel) updateModal(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if confirmed {
 		switch updated.modalType {
 		case ModalConfirm:
-			m.log = m.log.appendLine("Operación iniciada (mock)")
+			sel := m.list.AllSelected(m.state.Packages)
 			m.list = m.list.ClearSelection()
 			m.modal = nil
+
+			// Agrupar por manager en orden canónico
+			order := []domain.ManagerType{
+				domain.ManagerApt, domain.ManagerSnap, domain.ManagerFlatpak,
+				domain.ManagerDpkg, domain.ManagerPip, domain.ManagerNpm, domain.ManagerAppImage,
+			}
+			byManager := make(map[domain.ManagerType][]domain.Package)
+			for _, p := range sel {
+				byManager[p.Manager] = append(byManager[p.Manager], p)
+			}
+			for _, mgr := range order {
+				if pkgs, ok := byManager[mgr]; ok {
+					m.pendingOps = append(m.pendingOps, pendingOp{manager: mgr, pkgs: pkgs})
+				}
+			}
+
+			var cmd tea.Cmd
+			m, cmd = m.startNextOp()
+			return m, cmd
 		case ModalSudo:
 			m.modal = nil
 		case ModalQuitConfirm:
@@ -226,6 +245,7 @@ func (m AppModel) updateKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			if len(sel) == 0 {
 				return m, nil
 			}
+			m.currentKind = opRemove
 			modal := newConfirmModal(
 				fmt.Sprintf("Desinstalar %d paquete(s)", len(sel)),
 				strings.Join(packageNames(sel), ", "),
@@ -237,6 +257,7 @@ func (m AppModel) updateKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			if len(sel) == 0 {
 				return m, nil
 			}
+			m.currentKind = opUpdate
 			modal := newConfirmModal(
 				fmt.Sprintf("Actualizar %d paquete(s)", len(sel)),
 				strings.Join(packageNames(sel), ", "),
