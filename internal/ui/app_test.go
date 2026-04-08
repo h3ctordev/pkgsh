@@ -162,6 +162,25 @@ func TestApp_StartNextOp_EmptyQueue(t *testing.T) {
 	}
 }
 
+func TestApp_StartNextOp_SkipsMissingAdapter(t *testing.T) {
+	pkgs := []domain.Package{{Name: "vim", Manager: domain.ManagerApt, Version: "1.0"}}
+	app := New(pkgs, nil, Options{}) // adapters = nil → ningún manager disponible
+	app.pendingOps = []pendingOp{{manager: domain.ManagerApt, pkgs: pkgs}}
+	app.currentKind = opRemove
+
+	app, _ = app.startNextOp()
+
+	found := false
+	for _, line := range app.log.Lines() {
+		if strings.Contains(line, "[SKIP]") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected [SKIP] line when adapter is missing, got %v", app.log.Lines())
+	}
+}
+
 func TestApp_ConfirmDelete_StartsOperation(t *testing.T) {
 	pkgs := []domain.Package{
 		{Name: "vim", Manager: domain.ManagerApt, Version: "1.0"},
