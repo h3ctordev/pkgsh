@@ -205,7 +205,7 @@ func (m AppModel) updateKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m = m.applyFilter()
 
 		case "d":
-			sel := m.list.SelectedPackages()
+			sel := m.list.AllSelected(m.state.Packages)
 			if len(sel) == 0 {
 				return m, nil
 			}
@@ -216,7 +216,7 @@ func (m AppModel) updateKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.modal = &modal
 
 		case "u":
-			sel := m.list.SelectedPackages()
+			sel := m.list.AllSelected(m.state.Packages)
 			if len(sel) == 0 {
 				return m, nil
 			}
@@ -278,8 +278,8 @@ func (m AppModel) View() string {
 	}
 
 	// Filas consumidas por elementos fuera de los paneles:
-	// header(1) + searchBar(1) + bordes lista(2) + bordes log(2) + footer(1) = 7
-	available := m.height - 7
+	// header(1) + searchBar(1) + selectionBar(1) + bordes lista(2) + bordes log(2) + footer(1) = 8
+	available := m.height - 8
 	if available < 10 {
 		available = 10
 	}
@@ -303,10 +303,11 @@ func (m AppModel) View() string {
 		detailView,
 	)
 
+	selectionBar := m.viewSelectionBar(m.width)
 	logView := m.log.View(m.width, logHeight, m.state.ActivePanel == domain.PanelLog)
 	footer := m.viewFooter()
 
-	full := lipgloss.JoinVertical(lipgloss.Left, header, body, logView, footer)
+	full := lipgloss.JoinVertical(lipgloss.Left, header, body, selectionBar, logView, footer)
 
 	if m.modal != nil {
 		return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center,
@@ -361,6 +362,21 @@ func (m AppModel) viewSearchBar(width int) string {
 		Width(width - 2).
 		Padding(0, 1).
 		Render("> Buscar: " + query)
+}
+
+func (m AppModel) viewSelectionBar(width int) string {
+	sel := m.list.AllSelected(m.state.Packages)
+	base := lipgloss.NewStyle().Width(width).Padding(0, 1)
+	if len(sel) == 0 {
+		return base.Faint(true).Render("Sin selección")
+	}
+	names := make([]string, len(sel))
+	for i, p := range sel {
+		names[i] = fmt.Sprintf("%s (%s)", p.Name, string(p.Manager))
+	}
+	badge := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("86")).Render(fmt.Sprintf("☒ %d", len(sel)))
+	text := truncate(strings.Join(names, "  ·  "), width-10)
+	return base.Render(badge + "  " + text)
 }
 
 func (m AppModel) viewFooter() string {
