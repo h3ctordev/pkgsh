@@ -22,3 +22,7 @@ coverage.html
 # OS
 .DS_Store
 Thumbs.db
+
+# AI Agents
+.superpowers/
+docs/superpowers/
