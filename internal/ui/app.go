@@ -281,6 +281,35 @@ func (m AppModel) applyFilter() AppModel {
 	return m
 }
 
+// startNextOp toma la primera op de pendingOps, arranca la operación y devuelve readLineCmd.
+// Si la cola está vacía, loguea "Listo." y devuelve nil.
+// Si el adapter del manager no existe, loguea [SKIP] y pasa a la siguiente.
+func (m AppModel) startNextOp() (AppModel, tea.Cmd) {
+	for len(m.pendingOps) > 0 {
+		op := m.pendingOps[0]
+		m.pendingOps = m.pendingOps[1:]
+
+		adapter, ok := m.adapters[op.manager]
+		if !ok {
+			m.log = m.log.appendLine(fmt.Sprintf("[SKIP] %s: adapter no disponible", op.manager))
+			continue
+		}
+
+		m.currentManager = op.manager
+		var operation *domain.Operation
+		if m.currentKind == opRemove {
+			operation = adapter.Remove(op.pkgs)
+		} else {
+			operation = adapter.Update(op.pkgs)
+		}
+		m.state.Operation = operation
+		return m, readLineCmd(operation)
+	}
+
+	m.log = m.log.appendLine("Listo.")
+	return m, nil
+}
+
 func packageNames(pkgs []domain.Package) []string {
 	names := make([]string, len(pkgs))
 	for i, p := range pkgs {

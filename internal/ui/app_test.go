@@ -113,3 +113,75 @@ func TestApp_Quit(t *testing.T) {
 		t.Fatal("expected tea.Quit command on 'q'")
 	}
 }
+
+func TestApp_StartNextOp_SingleManager(t *testing.T) {
+	pkgs := []domain.Package{
+		{Name: "vim", Manager: domain.ManagerApt, Version: "1.0"},
+	}
+	adapters := map[domain.ManagerType]domain.PackageManager{
+		domain.ManagerApt: &fakeAdapter{manager: domain.ManagerApt, output: "Removing vim"},
+	}
+	app := New(pkgs, adapters, Options{})
+	app.pendingOps = []pendingOp{
+		{manager: domain.ManagerApt, pkgs: pkgs},
+	}
+	app.currentKind = opRemove
+
+	app, cmd := app.startNextOp()
+
+	if app.state.Operation == nil {
+		t.Fatal("expected Operation to be set after startNextOp")
+	}
+	if len(app.pendingOps) != 0 {
+		t.Fatalf("expected pendingOps to be empty, got %d", len(app.pendingOps))
+	}
+	if cmd == nil {
+		t.Fatal("expected non-nil cmd (readLineCmd) from startNextOp")
+	}
+}
+
+func TestApp_StartNextOp_EmptyQueue(t *testing.T) {
+	app := New(nil, nil, Options{})
+	app.pendingOps = []pendingOp{}
+
+	app, _ = app.startNextOp()
+
+	if app.state.Operation != nil {
+		t.Fatal("expected nil Operation when queue is empty")
+	}
+	found := false
+	for _, line := range app.log.Lines() {
+		if line == "Listo." {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected 'Listo.' in log, got %v", app.log.Lines())
+	}
+}
+
+// fakeAdapter implementa domain.PackageManager con output configurable para tests.
+type fakeAdapter struct {
+	manager domain.ManagerType
+	output  string
+	err     error
+}
+
+func (f *fakeAdapter) Name() string { return string(f.manager) }
+func (f *fakeAdapter) List() ([]domain.Package, error) { return nil, nil }
+func (f *fakeAdapter) Info(pkg domain.Package) (domain.PackageInfo, error) {
+	return domain.PackageInfo{Package: pkg}, nil
+}
+func (f *fakeAdapter) Remove(pkgs []domain.Package) *domain.Operation {
+	op := domain.NewOperation()
+	go func() {
+		if f.output != "" {
+			op.Writer().Write([]byte(f.output + "\n"))
+		}
+		op.Done(f.err)
+	}()
+	return op
+}
+func (f *fakeAdapter) Update(pkgs []domain.Package) *domain.Operation {
+	return f.Remove(pkgs)
+}

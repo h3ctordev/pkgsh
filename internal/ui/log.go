@@ -83,6 +83,9 @@ func readLineCmd(op *domain.Operation) tea.Cmd {
 	}
 }
 
+// Lines devuelve todas las líneas del log (para tests).
+func (lm LogModel) Lines() []string { return lm.lines }
+
 func logPanelStyle(active bool, width, height int) lipgloss.Style {
 	s := lipgloss.NewStyle().
 		Width(width - 2).
