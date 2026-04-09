@@ -42,6 +42,21 @@ type AppModel struct {
 	pendingOps     []pendingOp
 	currentKind    opKind
 	currentManager domain.ManagerType
+	loading        bool
+	loadedCount    int
+	totalAdapters  int
+}
+
+type packagesLoadedMsg struct {
+	manager domain.ManagerType
+	pkgs    []domain.Package
+}
+
+func loadAdapterCmd(mgr domain.ManagerType, adapter domain.PackageManager) tea.Cmd {
+	return func() tea.Msg {
+		pkgs, _ := adapter.List()
+		return packagesLoadedMsg{manager: mgr, pkgs: pkgs}
+	}
 }
 
 func New(pkgs []domain.Package, adapters map[domain.ManagerType]domain.PackageManager, opts Options) AppModel {
@@ -64,13 +79,20 @@ func New(pkgs []domain.Package, adapters map[domain.ManagerType]domain.PackageMa
 	filtered = domain.Sort(filtered, state.SortBy)
 	state.Filtered = filtered
 
-	return AppModel{
+	m := AppModel{
 		state:    state,
 		list:     newListModel().SetItems(filtered),
 		detail:   newDetailModel(),
 		log:      newLogModel(),
 		adapters: adapters,
 	}
+
+	if pkgs == nil && len(adapters) > 0 {
+		m.loading = true
+		m.totalAdapters = len(adapters)
+	}
+
+	return m
 }
 
 func filterUpgradeable(pkgs []domain.Package) []domain.Package {
@@ -93,7 +115,16 @@ func filterNative(pkgs []domain.Package) []domain.Package {
 	return out
 }
 
-func (m AppModel) Init() tea.Cmd { return nil }
+func (m AppModel) Init() tea.Cmd {
+	if !m.loading {
+		return nil
+	}
+	cmds := make([]tea.Cmd, 0, len(m.adapters))
+	for mgr, adapter := range m.adapters {
+		cmds = append(cmds, loadAdapterCmd(mgr, adapter))
+	}
+	return tea.Batch(cmds...)
+}
 
 func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if m.modal != nil {
@@ -118,6 +149,15 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		m, cmd = m.startNextOp()
 		return m, cmd
+
+	case packagesLoadedMsg:
+		m.state.Packages = append(m.state.Packages, msg.pkgs...)
+		m.loadedCount++
+		if m.loadedCount == m.totalAdapters {
+			m.loading = false
+			m = m.applyFilter()
+		}
+		return m, nil
 
 	case tea.KeyMsg:
 		if m.searching {
