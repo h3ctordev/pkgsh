@@ -153,7 +153,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case packagesLoadedMsg:
 		m.state.Packages = append(m.state.Packages, msg.pkgs...)
 		m.loadedCount++
-		if m.loadedCount == m.totalAdapters {
+		if m.loadedCount >= m.totalAdapters {
 			m.loading = false
 			m = m.applyFilter()
 		}
