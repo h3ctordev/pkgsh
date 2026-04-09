@@ -289,3 +289,59 @@ func (f *fakeAdapter) Remove(pkgs []domain.Package) *domain.Operation {
 func (f *fakeAdapter) Update(pkgs []domain.Package) *domain.Operation {
 	return f.Remove(pkgs)
 }
+
+func TestApp_ProgressiveLoad_InitialState(t *testing.T) {
+	adapters := map[domain.ManagerType]domain.PackageManager{
+		domain.ManagerApt: &fakeAdapter{manager: domain.ManagerApt},
+		domain.ManagerNpm: &fakeAdapter{manager: domain.ManagerNpm},
+	}
+	app := New(nil, adapters, Options{})
+
+	if !app.loading {
+		t.Fatal("expected loading=true when pkgs=nil and adapters provided")
+	}
+	if app.totalAdapters != 2 {
+		t.Fatalf("expected totalAdapters=2, got %d", app.totalAdapters)
+	}
+	if app.loadedCount != 0 {
+		t.Fatalf("expected loadedCount=0, got %d", app.loadedCount)
+	}
+}
+
+func TestApp_ProgressiveLoad_AccumulatesAndFinishes(t *testing.T) {
+	adapters := map[domain.ManagerType]domain.PackageManager{
+		domain.ManagerApt: &fakeAdapter{manager: domain.ManagerApt},
+		domain.ManagerNpm: &fakeAdapter{manager: domain.ManagerNpm},
+	}
+	app := New(nil, adapters, Options{})
+
+	aptPkgs := []domain.Package{{Name: "vim", Manager: domain.ManagerApt, Version: "9.0"}}
+	model, _ := app.Update(packagesLoadedMsg{manager: domain.ManagerApt, pkgs: aptPkgs})
+	app = model.(AppModel)
+
+	// Cargado 1/2: sigue loading, lista filtrada vacía
+	if !app.loading {
+		t.Fatal("expected still loading after 1 of 2")
+	}
+	if len(app.state.Packages) != 1 {
+		t.Fatalf("expected 1 accumulated package, got %d", len(app.state.Packages))
+	}
+	if len(app.state.Filtered) != 0 {
+		t.Fatal("expected filtered empty until all loaded")
+	}
+
+	npmPkgs := []domain.Package{{Name: "lodash", Manager: domain.ManagerNpm, Version: "4.0"}}
+	model, _ = app.Update(packagesLoadedMsg{manager: domain.ManagerNpm, pkgs: npmPkgs})
+	app = model.(AppModel)
+
+	// Cargado 2/2: loading=false, filtrado aplicado
+	if app.loading {
+		t.Fatal("expected loading=false after all adapters loaded")
+	}
+	if len(app.state.Packages) != 2 {
+		t.Fatalf("expected 2 packages, got %d", len(app.state.Packages))
+	}
+	if len(app.state.Filtered) != 2 {
+		t.Fatalf("expected 2 filtered packages, got %d", len(app.state.Filtered))
+	}
+}
