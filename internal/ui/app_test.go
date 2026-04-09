@@ -345,3 +345,42 @@ func TestApp_ProgressiveLoad_AccumulatesAndFinishes(t *testing.T) {
 		t.Fatalf("expected 2 filtered packages, got %d", len(app.state.Filtered))
 	}
 }
+
+func TestApp_ViewFooter_ShowsProgressBar(t *testing.T) {
+	adapters := map[domain.ManagerType]domain.PackageManager{
+		domain.ManagerApt: &fakeAdapter{manager: domain.ManagerApt},
+		domain.ManagerNpm: &fakeAdapter{manager: domain.ManagerNpm},
+	}
+	app := New(nil, adapters, Options{})
+	app.width = 80
+
+	footer := app.viewFooter()
+	if !strings.Contains(footer, "Cargando") {
+		t.Fatalf("expected 'Cargando' in footer during load, got: %q", footer)
+	}
+	if !strings.Contains(footer, "0/2") {
+		t.Fatalf("expected '0/2' progress in footer, got: %q", footer)
+	}
+
+	// Simular un adapter cargado
+	model, _ := app.Update(packagesLoadedMsg{manager: domain.ManagerApt, pkgs: nil})
+	app = model.(AppModel)
+
+	footer = app.viewFooter()
+	if !strings.Contains(footer, "1/2") {
+		t.Fatalf("expected '1/2' progress after one load, got: %q", footer)
+	}
+}
+
+func TestApp_ViewFooter_ShowsHintsWhenDone(t *testing.T) {
+	app := makeApp(makePackages("vim"))
+	app.width = 80
+
+	footer := app.viewFooter()
+	if strings.Contains(footer, "Cargando") {
+		t.Fatalf("expected normal hints footer, got: %q", footer)
+	}
+	if !strings.Contains(footer, "Buscar") {
+		t.Fatalf("expected hints in footer, got: %q", footer)
+	}
+}

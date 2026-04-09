@@ -492,10 +492,15 @@ func (m AppModel) viewSelectionBar(width int) string {
 }
 
 func (m AppModel) viewFooter() string {
+	base := lipgloss.NewStyle().Width(m.width).Faint(true).Padding(0, 1)
+	if m.loading {
+		filled := 0
+		if m.totalAdapters > 0 {
+			filled = m.loadedCount * 7 / m.totalAdapters
+		}
+		bar := strings.Repeat("█", filled) + strings.Repeat("░", 7-filled)
+		return base.Render(fmt.Sprintf("Cargando... [%s] %d/%d", bar, m.loadedCount, m.totalAdapters))
+	}
 	hints := "[/] Buscar  [Tab] Panel  [Space] Sel  [a] Todo  [Esc] Limpiar  [d] Desinstalar  [u] Actualizar  [s] Ordenar  [q] Salir"
-	return lipgloss.NewStyle().
-		Width(m.width).
-		Faint(true).
-		Padding(0, 1).
-		Render(hints)
+	return base.Render(hints)
 }
