@@ -497,6 +497,9 @@ func (m AppModel) viewFooter() string {
 		filled := 0
 		if m.totalAdapters > 0 {
 			filled = m.loadedCount * 7 / m.totalAdapters
+			if filled > 7 {
+				filled = 7
+			}
 		}
 		bar := strings.Repeat("█", filled) + strings.Repeat("░", 7-filled)
 		return base.Render(fmt.Sprintf("Cargando... [%s] %d/%d", bar, m.loadedCount, m.totalAdapters))
