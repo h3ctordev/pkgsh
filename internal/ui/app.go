@@ -160,6 +160,22 @@ func (m AppModel) updateModal(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.list = m.list.ClearSelection()
 			m.modal = nil
 
+			// Bloqueo activo: filtrar paquetes del sistema cuando security mode está activo
+			if m.state.SecurityMode {
+				var allowed []domain.Package
+				for _, p := range sel {
+					if domain.IsSystemPackage(p) {
+						m.log = m.log.appendLine(fmt.Sprintf("[SECURITY] %s: paquete del sistema, operación bloqueada", p.Name))
+					} else {
+						allowed = append(allowed, p)
+					}
+				}
+				sel = allowed
+			}
+			if len(sel) == 0 {
+				return m, nil
+			}
+
 			// Agrupar por manager en orden canónico
 			order := []domain.ManagerType{
 				domain.ManagerApt, domain.ManagerSnap, domain.ManagerFlatpak,
