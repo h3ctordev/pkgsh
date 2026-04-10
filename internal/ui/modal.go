@@ -92,7 +92,7 @@ func (m ModalModel) View(width int) string {
 			m.title,
 		)
 	case ModalSudo:
-		masked := strings.Repeat("•", len(m.input))
+		masked := strings.Repeat("*", len(m.input))
 		content = fmt.Sprintf(
 			"Se requiere contraseña de sudo:\n\n> %s\n\n[Enter] Confirmar    [Esc] Cancelar",
 			masked,

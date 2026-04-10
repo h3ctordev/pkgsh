@@ -107,7 +107,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case operationLineMsg:
-		m.log = m.log.appendLine(string(msg))
+		line := string(msg)
+		if strings.Contains(line, "PKGSH_SUDO:") && m.state.Operation != nil {
+			modal := newSudoModal()
+			m.modal = &modal
+			return m, nil // pause scanner — modal will resume it
+		}
+		m.log = m.log.appendLine(line)
 		return m, readLineCmd(m.state.Operation)
 
 	case operationDoneMsg:
@@ -118,6 +124,11 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		m, cmd = m.startNextOp()
 		return m, cmd
+
+	case packagesReloadedMsg:
+		m.state.Packages = msg.pkgs
+		m = m.applyFilter()
+		return m, nil
 
 	case tea.KeyMsg:
 		if m.searching {
@@ -132,6 +143,11 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m AppModel) updateModal(msg tea.Msg) (tea.Model, tea.Cmd) {
 	updated, confirmed, cancelled := m.modal.Update(msg)
 	if cancelled {
+		if m.modal.modalType == ModalSudo && m.state.Operation != nil {
+			m.state.Operation.CloseStdin()
+			m.modal = nil
+			return m, readLineCmd(m.state.Operation)
+		}
 		m.modal = nil
 		return m, nil
 	}
@@ -161,7 +177,13 @@ func (m AppModel) updateModal(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m, cmd = m.startNextOp()
 			return m, cmd
 		case ModalSudo:
+			if m.state.Operation != nil {
+				m.state.Operation.SendInput(updated.input + "\n")
+				m.modal = nil
+				return m, readLineCmd(m.state.Operation)
+			}
 			m.modal = nil
+			return m, nil
 		case ModalQuitConfirm:
 			return m, tea.Quit
 		}
@@ -333,7 +355,21 @@ func (m AppModel) startNextOp() (AppModel, tea.Cmd) {
 	}
 
 	m.log = m.log.appendLine("Listo.")
-	return m, nil
+	return m, m.reloadPackagesCmd()
+}
+
+type packagesReloadedMsg struct{ pkgs []domain.Package }
+
+func (m AppModel) reloadPackagesCmd() tea.Cmd {
+	adapters := m.adapters
+	return func() tea.Msg {
+		var pkgs []domain.Package
+		for _, adapter := range adapters {
+			list, _ := adapter.List()
+			pkgs = append(pkgs, list...)
+		}
+		return packagesReloadedMsg{pkgs: pkgs}
+	}
 }
 
 func packageNames(pkgs []domain.Package) []string {

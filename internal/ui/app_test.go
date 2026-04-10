@@ -289,3 +289,102 @@ func (f *fakeAdapter) Remove(pkgs []domain.Package) *domain.Operation {
 func (f *fakeAdapter) Update(pkgs []domain.Package) *domain.Operation {
 	return f.Remove(pkgs)
 }
+
+func TestApp_SudoPrompt_OpensSudoModal(t *testing.T) {
+	app := New(nil, nil, Options{})
+	app.state.Operation = domain.NewOperation()
+
+	model, _ := app.Update(operationLineMsg("PKGSH_SUDO:"))
+	app = model.(AppModel)
+
+	if app.modal == nil {
+		t.Fatal("expected sudo modal to open on PKGSH_SUDO: line")
+	}
+	if app.modal.modalType != ModalSudo {
+		t.Fatalf("expected ModalSudo, got %d", app.modal.modalType)
+	}
+	// Line should NOT be logged
+	for _, line := range app.log.Lines() {
+		if line == "PKGSH_SUDO:" {
+			t.Fatal("PKGSH_SUDO: should not be logged")
+		}
+	}
+}
+
+func TestApp_SudoModal_Confirmed_SendsInputAndResumesStream(t *testing.T) {
+	op := domain.NewOperation()
+
+	// Read stdin in background — will block until SendInput writes
+	received := make(chan string, 1)
+	go func() {
+		buf := make([]byte, 64)
+		n, _ := op.StdinReader().Read(buf)
+		received <- string(buf[:n])
+	}()
+
+	sudoModal := newSudoModal()
+	sudoModal.input = "mypassword"
+
+	app := New(nil, nil, Options{})
+	app.state.Operation = op
+	app.modal = &sudoModal
+
+	// Press Enter to confirm
+	model, cmd := app.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	app = model.(AppModel)
+
+	if app.modal != nil {
+		t.Fatal("expected modal to close after confirm")
+	}
+	if cmd == nil {
+		t.Fatal("expected readLineCmd to be returned after sudo confirm")
+	}
+
+	// Verify the correct bytes were written to stdin.
+	// The reader goroutine blocks until SendInput's goroutine writes; receive that first.
+	if got := <-received; got != "mypassword\n" {
+		t.Fatalf("expected stdin to receive %q, got %q", "mypassword\n", got)
+	}
+	op.Done(nil)
+}
+
+func TestApp_SudoModal_Cancelled_ClosesStdinAndResumesStream(t *testing.T) {
+	op := domain.NewOperation()
+
+	sudoModal := newSudoModal()
+	app := New(nil, nil, Options{})
+	app.state.Operation = op
+	app.modal = &sudoModal
+
+	// Press Esc to cancel
+	model, cmd := app.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	app = model.(AppModel)
+
+	if app.modal != nil {
+		t.Fatal("expected modal to close after cancel")
+	}
+	if cmd == nil {
+		t.Fatal("expected readLineCmd to be returned after sudo cancel")
+	}
+}
+
+func TestApp_RegularLine_NotTreatedAsSudoPrompt(t *testing.T) {
+	app := New(nil, nil, Options{})
+	app.state.Operation = domain.NewOperation()
+
+	model, _ := app.Update(operationLineMsg("Removing vim..."))
+	app = model.(AppModel)
+
+	if app.modal != nil {
+		t.Fatal("expected no modal for regular line")
+	}
+	found := false
+	for _, line := range app.log.Lines() {
+		if line == "Removing vim..." {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("expected regular line to be logged")
+	}
+}
