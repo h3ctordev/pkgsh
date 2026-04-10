@@ -54,7 +54,7 @@ func New(pkgs []domain.Package, adapters map[domain.ManagerType]domain.PackageMa
 		ActiveTab:   opts.Manager,
 	}
 
-	filtered := domain.Filter(pkgs, state.SearchQuery, state.ActiveTab)
+	filtered := domain.Filter(pkgs, state.SearchQuery, state.ActiveTab, false)
 	if opts.Upgradeable {
 		filtered = filterUpgradeable(filtered)
 	}
@@ -322,7 +322,7 @@ func (m AppModel) updateKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m AppModel) applyFilter() AppModel {
-	filtered := domain.Filter(m.state.Packages, m.state.SearchQuery, m.state.ActiveTab)
+	filtered := domain.Filter(m.state.Packages, m.state.SearchQuery, m.state.ActiveTab, m.state.SecurityMode)
 	filtered = domain.Sort(filtered, m.state.SortBy)
 	m.state.Filtered = filtered
 	m.list = m.list.SetItems(filtered)
