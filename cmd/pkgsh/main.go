@@ -100,5 +100,5 @@ func loadPackages(adapters map[domain.ManagerType]domain.PackageManager) []domai
 	for _, r := range results {
 		all = append(all, r.pkgs...)
 	}
-	return all
+	return domain.DeduplicatePackages(all)
 }

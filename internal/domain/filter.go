@@ -65,3 +65,22 @@ func Sort(pkgs []Package, by SortField) []Package {
 	})
 	return sorted
 }
+
+// DeduplicatePackages elimina entradas dpkg cuando el mismo paquete ya existe en apt.
+// apt es la fuente autoritativa: tiene NewVersion, Origin e interfaz remove/update.
+func DeduplicatePackages(pkgs []Package) []Package {
+	aptNames := make(map[string]bool, len(pkgs))
+	for _, p := range pkgs {
+		if p.Manager == ManagerApt {
+			aptNames[p.Name] = true
+		}
+	}
+	out := pkgs[:0:0]
+	for _, p := range pkgs {
+		if p.Manager == ManagerDpkg && aptNames[p.Name] {
+			continue
+		}
+		out = append(out, p)
+	}
+	return out
+}

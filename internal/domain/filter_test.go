@@ -58,3 +58,37 @@ func namesOf(pkgs []domain.Package) []string {
 	}
 	return out
 }
+
+func TestDeduplicatePackages_RemovesDpkgWhenAptExists(t *testing.T) {
+	pkgs := []domain.Package{
+		{Name: "bash", Manager: domain.ManagerApt, Version: "5.2"},
+		{Name: "bash", Manager: domain.ManagerDpkg, Version: "5.2"},
+		{Name: "vim", Manager: domain.ManagerApt, Version: "9.0"},
+		{Name: "only-dpkg", Manager: domain.ManagerDpkg, Version: "1.0"},
+		{Name: "node", Manager: domain.ManagerNpm, Version: "20.0"},
+	}
+	got := domain.DeduplicatePackages(pkgs)
+	byNameManager := map[string]bool{}
+	for _, p := range got {
+		byNameManager[p.Name+":"+string(p.Manager)] = true
+	}
+
+	if byNameManager["bash:dpkg"] {
+		t.Error("bash:dpkg should be removed when bash:apt exists")
+	}
+	if !byNameManager["bash:apt"] {
+		t.Error("bash:apt should be kept")
+	}
+	if !byNameManager["vim:apt"] {
+		t.Error("vim:apt should be kept")
+	}
+	if !byNameManager["only-dpkg:dpkg"] {
+		t.Error("only-dpkg:dpkg should be kept when no apt equivalent exists")
+	}
+	if !byNameManager["node:npm"] {
+		t.Error("node:npm should be kept unchanged")
+	}
+	if len(got) != 4 {
+		t.Errorf("expected 4 packages, got %d: %v", len(got), namesOf(got))
+	}
+}
