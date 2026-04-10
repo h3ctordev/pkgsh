@@ -313,10 +313,16 @@ func TestApp_SudoPrompt_OpensSudoModal(t *testing.T) {
 
 func TestApp_SudoModal_Confirmed_SendsInputAndResumesStream(t *testing.T) {
 	op := domain.NewOperation()
-	go op.Done(nil) // close immediately so readLineCmd won't block
+
+	// Read stdin in background — will block until SendInput writes
+	received := make(chan string, 1)
+	go func() {
+		buf := make([]byte, 64)
+		n, _ := op.StdinReader().Read(buf)
+		received <- string(buf[:n])
+	}()
 
 	sudoModal := newSudoModal()
-	// simulate user typed "mypassword"
 	sudoModal.input = "mypassword"
 
 	app := New(nil, nil, Options{})
@@ -333,11 +339,17 @@ func TestApp_SudoModal_Confirmed_SendsInputAndResumesStream(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("expected readLineCmd to be returned after sudo confirm")
 	}
+
+	// Verify the correct bytes were written to stdin.
+	// The reader goroutine blocks until SendInput's goroutine writes; receive that first.
+	if got := <-received; got != "mypassword\n" {
+		t.Fatalf("expected stdin to receive %q, got %q", "mypassword\n", got)
+	}
+	op.Done(nil)
 }
 
 func TestApp_SudoModal_Cancelled_ClosesStdinAndResumesStream(t *testing.T) {
 	op := domain.NewOperation()
-	go op.Done(nil) // close immediately
 
 	sudoModal := newSudoModal()
 	app := New(nil, nil, Options{})
@@ -359,7 +371,6 @@ func TestApp_SudoModal_Cancelled_ClosesStdinAndResumesStream(t *testing.T) {
 func TestApp_RegularLine_NotTreatedAsSudoPrompt(t *testing.T) {
 	app := New(nil, nil, Options{})
 	app.state.Operation = domain.NewOperation()
-	go app.state.Operation.Done(nil)
 
 	model, _ := app.Update(operationLineMsg("Removing vim..."))
 	app = model.(AppModel)

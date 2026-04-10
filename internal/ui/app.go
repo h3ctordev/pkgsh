@@ -172,9 +172,13 @@ func (m AppModel) updateModal(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m, cmd = m.startNextOp()
 			return m, cmd
 		case ModalSudo:
-			m.state.Operation.SendInput(updated.input + "\n")
+			if m.state.Operation != nil {
+				m.state.Operation.SendInput(updated.input + "\n")
+				m.modal = nil
+				return m, readLineCmd(m.state.Operation)
+			}
 			m.modal = nil
-			return m, readLineCmd(m.state.Operation)
+			return m, nil
 		case ModalQuitConfirm:
 			return m, tea.Quit
 		}
