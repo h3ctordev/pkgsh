@@ -108,7 +108,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case operationLineMsg:
 		line := string(msg)
-		if line == "PKGSH_SUDO:" && m.state.Operation != nil {
+		if strings.Contains(line, "PKGSH_SUDO:") && m.state.Operation != nil {
 			modal := newSudoModal()
 			m.modal = &modal
 			return m, nil // pause scanner — modal will resume it
