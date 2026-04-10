@@ -50,6 +50,7 @@ func (o *Operation) Done(err error) {
 	o.done = true
 	o.err = err
 	o.pw.CloseWithError(err)
+	o.stdinW.Close()
 }
 
 func (o *Operation) Err() error {
