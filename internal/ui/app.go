@@ -495,18 +495,22 @@ func (m AppModel) viewSelectionBar(width int) string {
 
 func (m AppModel) viewFooter() string {
 	hints := "[/] Buscar  [Tab] Panel  [Space] Sel  [a] Todo  [Esc] Limpiar  [d] Desinstalar  [u] Actualizar  [s] Ordenar  [S] Seg  [q] Salir"
+
+	badgeStr := ""
+	badgeWidth := 0
+	if m.state.SecurityMode {
+		badgeStr = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("214")).Render("[SEC]")
+		badgeWidth = 7 // "[SEC]" (5) + "  " (2)
+	}
+
 	footer := lipgloss.NewStyle().
-		Width(m.width).
+		Width(m.width - badgeWidth).
 		Faint(true).
 		Padding(0, 1).
 		Render(hints)
 
-	if m.state.SecurityMode {
-		badge := lipgloss.NewStyle().
-			Bold(true).
-			Foreground(lipgloss.Color("214")).
-			Render("[SEC]")
-		footer = badge + "  " + footer
+	if badgeWidth > 0 {
+		return badgeStr + "  " + footer
 	}
 	return footer
 }
