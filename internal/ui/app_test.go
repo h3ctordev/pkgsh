@@ -388,3 +388,39 @@ func TestApp_RegularLine_NotTreatedAsSudoPrompt(t *testing.T) {
 		t.Fatal("expected regular line to be logged")
 	}
 }
+
+func TestApp_SecurityModeToggle(t *testing.T) {
+	pkgs := []domain.Package{
+		{Name: "vim", Manager: domain.ManagerApt, Version: "9.0"},
+		{Name: "bash", Manager: domain.ManagerApt, Version: "5.2"},   // sistema
+		{Name: "libc6", Manager: domain.ManagerApt, Version: "2.35"}, // sistema
+	}
+	app := New(pkgs, nil, Options{SecurityMode: true})
+
+	// Con security mode activo, solo vim en Filtered
+	if len(app.state.Filtered) != 1 {
+		t.Fatalf("expected 1 non-system package at start, got %d: %v", len(app.state.Filtered), app.state.Filtered)
+	}
+
+	// Toggle con 'S' → desactiva
+	model, _ := app.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'S'}})
+	app = model.(AppModel)
+
+	if app.state.SecurityMode {
+		t.Fatal("expected SecurityMode=false after 'S' toggle")
+	}
+	if len(app.state.Filtered) != 3 {
+		t.Fatalf("expected 3 packages after disabling security mode, got %d", len(app.state.Filtered))
+	}
+
+	// Toggle de nuevo con 'S' → activa
+	model, _ = app.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'S'}})
+	app = model.(AppModel)
+
+	if !app.state.SecurityMode {
+		t.Fatal("expected SecurityMode=true after second 'S' toggle")
+	}
+	if len(app.state.Filtered) != 1 {
+		t.Fatalf("expected 1 package after re-enabling security mode, got %d", len(app.state.Filtered))
+	}
+}

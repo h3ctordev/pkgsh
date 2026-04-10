@@ -11,10 +11,11 @@ import (
 
 // Options configuran el arranque de la aplicación (desde flags CLI).
 type Options struct {
-	Manager     domain.ManagerType
-	Upgradeable bool
-	Native      bool
-	Search      string
+	Manager      domain.ManagerType
+	Upgradeable  bool
+	Native       bool
+	Search       string
+	SecurityMode bool
 }
 
 type opKind int
@@ -46,15 +47,16 @@ type AppModel struct {
 
 func New(pkgs []domain.Package, adapters map[domain.ManagerType]domain.PackageManager, opts Options) AppModel {
 	state := domain.AppState{
-		Packages:    pkgs,
-		Selected:    make(map[int]bool),
-		SortBy:      domain.SortByName,
-		ActivePanel: domain.PanelList,
-		SearchQuery: opts.Search,
-		ActiveTab:   opts.Manager,
+		Packages:     pkgs,
+		Selected:     make(map[int]bool),
+		SortBy:       domain.SortByName,
+		ActivePanel:  domain.PanelList,
+		SearchQuery:  opts.Search,
+		ActiveTab:    opts.Manager,
+		SecurityMode: opts.SecurityMode,
 	}
 
-	filtered := domain.Filter(pkgs, state.SearchQuery, state.ActiveTab, false)
+	filtered := domain.Filter(pkgs, state.SearchQuery, state.ActiveTab, state.SecurityMode)
 	if opts.Upgradeable {
 		filtered = filterUpgradeable(filtered)
 	}
@@ -265,6 +267,10 @@ func (m AppModel) updateKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 		case "s":
 			m.state.SortBy = (m.state.SortBy + 1) % 4
+			m = m.applyFilter()
+
+		case "S":
+			m.state.SecurityMode = !m.state.SecurityMode
 			m = m.applyFilter()
 
 		case "d":
@@ -488,10 +494,19 @@ func (m AppModel) viewSelectionBar(width int) string {
 }
 
 func (m AppModel) viewFooter() string {
-	hints := "[/] Buscar  [Tab] Panel  [Space] Sel  [a] Todo  [Esc] Limpiar  [d] Desinstalar  [u] Actualizar  [s] Ordenar  [q] Salir"
-	return lipgloss.NewStyle().
+	hints := "[/] Buscar  [Tab] Panel  [Space] Sel  [a] Todo  [Esc] Limpiar  [d] Desinstalar  [u] Actualizar  [s] Ordenar  [S] Seg  [q] Salir"
+	footer := lipgloss.NewStyle().
 		Width(m.width).
 		Faint(true).
 		Padding(0, 1).
 		Render(hints)
+
+	if m.state.SecurityMode {
+		badge := lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("214")).
+			Render("[SEC]")
+		footer = badge + "  " + footer
+	}
+	return footer
 }
