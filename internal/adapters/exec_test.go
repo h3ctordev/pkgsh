@@ -2,9 +2,9 @@ package adapters_test
 
 import (
 	"bufio"
+	"io"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/hbustos/pkgsh/internal/adapters"
 	"github.com/hbustos/pkgsh/internal/domain"
@@ -38,12 +38,15 @@ func TestRunCmd_NoShellInjection(t *testing.T) {
 }
 
 func TestStreamCmdStdin_PassesInputToProcess(t *testing.T) {
+	pr, pw := io.Pipe()
 	op := domain.NewOperation()
-	// cat lee stdin y escribe en stdout
-	go adapters.StreamCmdStdin([]string{"cat"}, op.StdinReader(), op.Writer())
-	op.SendInput("pkgsh\n")
-	time.Sleep(10 * time.Millisecond) // dar tiempo a la goroutine de SendInput
-	op.CloseStdin() // señalar EOF para que cat termine
+	go adapters.StreamCmdStdin([]string{"cat"}, pr, op.Writer())
+
+	// pw.Write blocks until cat reads — deterministic, no sleep needed
+	if _, err := pw.Write([]byte("pkgsh\n")); err != nil {
+		t.Fatalf("failed to write to stdin pipe: %v", err)
+	}
+	pw.Close() // EOF → cat exits
 
 	scanner := bufio.NewScanner(op.Reader())
 	if !scanner.Scan() {
