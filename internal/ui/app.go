@@ -125,6 +125,11 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m, cmd = m.startNextOp()
 		return m, cmd
 
+	case packagesReloadedMsg:
+		m.state.Packages = msg.pkgs
+		m = m.applyFilter()
+		return m, nil
+
 	case tea.KeyMsg:
 		if m.searching {
 			return m.updateSearch(msg)
@@ -350,7 +355,21 @@ func (m AppModel) startNextOp() (AppModel, tea.Cmd) {
 	}
 
 	m.log = m.log.appendLine("Listo.")
-	return m, nil
+	return m, m.reloadPackagesCmd()
+}
+
+type packagesReloadedMsg struct{ pkgs []domain.Package }
+
+func (m AppModel) reloadPackagesCmd() tea.Cmd {
+	adapters := m.adapters
+	return func() tea.Msg {
+		var pkgs []domain.Package
+		for _, adapter := range adapters {
+			list, _ := adapter.List()
+			pkgs = append(pkgs, list...)
+		}
+		return packagesReloadedMsg{pkgs: pkgs}
+	}
 }
 
 func packageNames(pkgs []domain.Package) []string {
