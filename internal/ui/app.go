@@ -230,6 +230,12 @@ func (m AppModel) updateSearch(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m AppModel) updateKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.loading {
+		if msg.Type == tea.KeyCtrlC {
+			return m, tea.Quit
+		}
+		return m, nil
+	}
 	switch msg.Type {
 	case tea.KeyCtrlC:
 		return m, tea.Quit
