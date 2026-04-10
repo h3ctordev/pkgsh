@@ -1,0 +1,81 @@
+.TH PKGSH 1 "2026-04-07" "pkgsh" "User Commands"
+.SH NAME
+pkgsh \- gestor unificado de paquetes para Ubuntu/Debian
+.SH SYNOPSIS
+.B pkgsh
+[\fIOPCIONES\fR]
+.SH DESCRIPTION
+.B pkgsh
+es una interfaz TUI (Terminal User Interface) que unifica la gestión de paquetes de múltiples gestores en un solo lugar: apt, snap, flatpak, dpkg, pip, npm y AppImage.
+.PP
+Al arrancar, carga en paralelo todos los gestores disponibles en el sistema y presenta los paquetes instalados en una lista navegable. Permite buscar, filtrar, seleccionar, desinstalar y actualizar paquetes sin salir del terminal.
+.SH OPTIONS
+.TP
+.B \-\-manager \fIGESTOR\fR
+Pre-filtra la lista por gestor. Valores válidos: \fIapt\fR, \fIsnap\fR, \fIflatpak\fR, \fIdpkg\fR, \fIpip\fR, \fInpm\fR, \fIappimage\fR.
+.TP
+.B \-\-upgradeable
+Muestra únicamente los paquetes con actualizaciones disponibles.
+.TP
+.B \-\-native
+Muestra únicamente paquetes nativos del sistema operativo.
+.TP
+.B \-\-search \fITÉRMINO\fR
+Activa la búsqueda con el término indicado al arrancar.
+.TP
+.B \-\-version
+Muestra la versión de pkgsh y sale.
+.SH KEYBINDINGS
+.TP
+.B /
+Abrir búsqueda
+.TP
+.B Tab
+Cambiar panel activo
+.TP
+.B Space
+Seleccionar/deseleccionar paquete
+.TP
+.B a
+Seleccionar/deseleccionar todos
+.TP
+.B d
+Desinstalar paquetes seleccionados
+.TP
+.B u
+Actualizar paquetes seleccionados
+.TP
+.B s
+Cambiar criterio de ordenación
+.TP
+.B Esc
+Limpiar selección o cerrar búsqueda
+.TP
+.B q
+Salir
+.SH EXAMPLES
+.TP
+Arrancar con todos los gestores:
+.B pkgsh
+.TP
+Ver solo paquetes apt con actualizaciones:
+.B pkgsh \-\-manager apt \-\-upgradeable
+.TP
+Buscar "python" al arrancar:
+.B pkgsh \-\-search python
+.SH SECURITY
+.B pkgsh
+nunca ejecuta comandos mediante interpolación de shell. Todos los comandos del sistema se pasan como arrays de argumentos a \fBexec.Cmd\fR, eliminando el riesgo de inyección de shell.
+.PP
+Las operaciones que requieren privilegios (apt remove, apt install) solicitan la contraseña sudo mediante un modal seguro integrado en la TUI.
+.SH AUTHOR
+Hector Bustos y colaboradores.
+.SH LICENSE
+MIT License. Ver \fIhttps://github.com/hbustos/pkgsh\fR para más información.
+.SH SEE ALSO
+.BR apt (8),
+.BR snap (1),
+.BR flatpak (1),
+.BR dpkg (1),
+.BR pip (1),
+.BR npm (1)

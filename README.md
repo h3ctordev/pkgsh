@@ -72,6 +72,7 @@ pkgsh --search firefox         # arrancar con búsqueda activa
 | `Tab`     | Cambiar panel activo                                          |
 | `[1-8]`   | Filtrar por gestor (1=Todos, 2=apt … 8=AppImage)              |
 | `q`       | Salir                                                         |
+| `Ctrl+C`  | Salir inmediatamente                                          |
 
 ## Arquitectura
 

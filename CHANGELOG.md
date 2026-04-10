@@ -8,6 +8,17 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Campo `Path` en `domain.Package` para almacenar la ruta de instalación
+- Panel de lista con 4 columnas: checkbox+nombre, versión, gestor, indicador de actualización
+- Header y separador en el panel de lista para mayor legibilidad
+- Campo **Ruta** en el panel de detalle del paquete
+- Soporte para salir con `Ctrl+C`
+
+### Changed
+- Panel de lista ocupa 2/3 del ancho de la terminal (antes 40%)
+- Panel de detalle con padding superior para mejor respiración visual
+
+### Added
 - Estructura base del proyecto
 - Diseño de arquitectura en cuatro capas
 - Spec de interfaz TUI
