@@ -23,11 +23,12 @@ var version = "dev"
 
 func main() {
 	var (
-		managerFlag     = flag.String("manager", "", "filtrar por gestor (apt,snap,flatpak,dpkg,pip,npm,appimage)")
-		upgradeableFlag = flag.Bool("upgradeable", false, "solo paquetes con actualizaciones disponibles")
-		nativeFlag      = flag.Bool("native", false, "solo paquetes nativos del OS")
-		searchFlag      = flag.String("search", "", "búsqueda inicial al arrancar")
-		verFlag         = flag.Bool("version", false, "mostrar versión")
+		managerFlag       = flag.String("manager", "", "filtrar por gestor (apt,snap,flatpak,dpkg,pip,npm,appimage)")
+		upgradeableFlag   = flag.Bool("upgradeable", false, "solo paquetes con actualizaciones disponibles")
+		nativeFlag        = flag.Bool("native", false, "solo paquetes nativos del OS")
+		searchFlag        = flag.String("search", "", "búsqueda inicial al arrancar")
+		noSecurityMode    = flag.Bool("no-security-mode", false, "desactivar protección de paquetes del sistema")
+		verFlag           = flag.Bool("version", false, "mostrar versión")
 	)
 	flag.Parse()
 
@@ -42,10 +43,11 @@ func main() {
 	}
 
 	opts := ui.Options{
-		Manager:     manager,
-		Upgradeable: *upgradeableFlag,
-		Native:      *nativeFlag,
-		Search:      *searchFlag,
+		Manager:       manager,
+		Upgradeable:   *upgradeableFlag,
+		Native:        *nativeFlag,
+		Search:        *searchFlag,
+		SecurityMode:  !*noSecurityMode,
 	}
 
 	adapterMap := map[domain.ManagerType]domain.PackageManager{
