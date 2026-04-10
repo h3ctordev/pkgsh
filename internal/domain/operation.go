@@ -30,7 +30,7 @@ func (o *Operation) Writer() io.WriteCloser {
 }
 
 // StdinReader expone el extremo de lectura para cmd.Stdin.
-func (o *Operation) StdinReader() io.Reader {
+func (o *Operation) StdinReader() io.ReadCloser {
 	return o.stdinR
 }
 

@@ -25,7 +25,10 @@ func newLogModel() LogModel {
 }
 
 func (lm LogModel) appendLine(line string) LogModel {
-	line = strings.TrimRight(line, "\r")
+	// dpkg uses \r to overwrite progress in-place; keep only the last segment.
+	if i := strings.LastIndex(line, "\r"); i >= 0 {
+		line = line[i+1:]
+	}
 	lm.lines = append(lm.lines, line)
 	return lm
 }
