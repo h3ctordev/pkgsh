@@ -36,23 +36,21 @@ func (a *Adapter) List() ([]domain.Package, error) {
 
 func (a *Adapter) Remove(pkgs []domain.Package) *domain.Operation {
 	op := domain.NewOperation()
-	args := make([]string, 0, len(pkgs)+3)
-	args = append(args, "sudo", "apt", "remove", "-y")
+	args := []string{"sudo", "-S", "-p", "PKGSH_SUDO:\n", "apt", "remove", "-y"}
 	for _, p := range pkgs {
 		args = append(args, p.Name)
 	}
-	go adapters.StreamCmd(args, op.Writer())
+	go adapters.StreamCmdStdin(args, op.StdinReader(), op.Writer())
 	return op
 }
 
 func (a *Adapter) Update(pkgs []domain.Package) *domain.Operation {
 	op := domain.NewOperation()
-	args := make([]string, 0, len(pkgs)+4)
-	args = append(args, "sudo", "apt", "install", "--only-upgrade", "-y")
+	args := []string{"sudo", "-S", "-p", "PKGSH_SUDO:\n", "apt", "install", "--only-upgrade", "-y"}
 	for _, p := range pkgs {
 		args = append(args, p.Name)
 	}
-	go adapters.StreamCmd(args, op.Writer())
+	go adapters.StreamCmdStdin(args, op.StdinReader(), op.Writer())
 	return op
 }
 
