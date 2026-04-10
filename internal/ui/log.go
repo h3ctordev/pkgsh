@@ -2,6 +2,7 @@ package ui
 
 import (
 	"bufio"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -24,6 +25,7 @@ func newLogModel() LogModel {
 }
 
 func (lm LogModel) appendLine(line string) LogModel {
+	line = strings.TrimRight(line, "\r")
 	lm.lines = append(lm.lines, line)
 	return lm
 }
@@ -64,9 +66,14 @@ func (lm LogModel) View(width, height int, active bool) string {
 		end = len(lm.lines)
 	}
 
+	// inner width = panel width - 2 (border) - 2 (padding) - 1 (margin)
+	maxLineWidth := width - 5
+	if maxLineWidth < 10 {
+		maxLineWidth = 10
+	}
 	var rendered []string
 	for _, line := range lm.lines[start:end] {
-		rendered = append(rendered, line)
+		rendered = append(rendered, truncate(line, maxLineWidth))
 	}
 	return style.Render(lipgloss.JoinVertical(lipgloss.Left, rendered...))
 }
