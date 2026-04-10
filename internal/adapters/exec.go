@@ -2,6 +2,7 @@ package adapters
 
 import (
 	"bytes"
+	"io"
 	"os/exec"
 )
 
@@ -27,6 +28,21 @@ func StreamCmd(args []string, w interface {
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Stdout = w
 	cmd.Stderr = w
+	err := cmd.Run()
+	w.Close()
+	_ = err
+}
+
+// StreamCmdStdin ejecuta args[0] con args[1:] con stdin controlado externamente.
+// Cierra w al terminar. NUNCA usar exec.Command("sh", "-c", ...).
+func StreamCmdStdin(args []string, stdin io.Reader, w interface {
+	Write([]byte) (int, error)
+	Close() error
+}) {
+	cmd := exec.Command(args[0], args[1:]...)
+	cmd.Stdout = w
+	cmd.Stderr = w
+	cmd.Stdin = stdin
 	err := cmd.Run()
 	w.Close()
 	_ = err
