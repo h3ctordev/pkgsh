@@ -289,3 +289,91 @@ func (f *fakeAdapter) Remove(pkgs []domain.Package) *domain.Operation {
 func (f *fakeAdapter) Update(pkgs []domain.Package) *domain.Operation {
 	return f.Remove(pkgs)
 }
+
+func TestApp_SudoPrompt_OpensSudoModal(t *testing.T) {
+	app := New(nil, nil, Options{})
+	app.state.Operation = domain.NewOperation()
+
+	model, _ := app.Update(operationLineMsg("PKGSH_SUDO:"))
+	app = model.(AppModel)
+
+	if app.modal == nil {
+		t.Fatal("expected sudo modal to open on PKGSH_SUDO: line")
+	}
+	if app.modal.modalType != ModalSudo {
+		t.Fatalf("expected ModalSudo, got %d", app.modal.modalType)
+	}
+	// Line should NOT be logged
+	for _, line := range app.log.Lines() {
+		if line == "PKGSH_SUDO:" {
+			t.Fatal("PKGSH_SUDO: should not be logged")
+		}
+	}
+}
+
+func TestApp_SudoModal_Confirmed_SendsInputAndResumesStream(t *testing.T) {
+	op := domain.NewOperation()
+	go op.Done(nil) // close immediately so readLineCmd won't block
+
+	sudoModal := newSudoModal()
+	// simulate user typed "mypassword"
+	sudoModal.input = "mypassword"
+
+	app := New(nil, nil, Options{})
+	app.state.Operation = op
+	app.modal = &sudoModal
+
+	// Press Enter to confirm
+	model, cmd := app.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	app = model.(AppModel)
+
+	if app.modal != nil {
+		t.Fatal("expected modal to close after confirm")
+	}
+	if cmd == nil {
+		t.Fatal("expected readLineCmd to be returned after sudo confirm")
+	}
+}
+
+func TestApp_SudoModal_Cancelled_ClosesStdinAndResumesStream(t *testing.T) {
+	op := domain.NewOperation()
+	go op.Done(nil) // close immediately
+
+	sudoModal := newSudoModal()
+	app := New(nil, nil, Options{})
+	app.state.Operation = op
+	app.modal = &sudoModal
+
+	// Press Esc to cancel
+	model, cmd := app.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	app = model.(AppModel)
+
+	if app.modal != nil {
+		t.Fatal("expected modal to close after cancel")
+	}
+	if cmd == nil {
+		t.Fatal("expected readLineCmd to be returned after sudo cancel")
+	}
+}
+
+func TestApp_RegularLine_NotTreatedAsSudoPrompt(t *testing.T) {
+	app := New(nil, nil, Options{})
+	app.state.Operation = domain.NewOperation()
+	go app.state.Operation.Done(nil)
+
+	model, _ := app.Update(operationLineMsg("Removing vim..."))
+	app = model.(AppModel)
+
+	if app.modal != nil {
+		t.Fatal("expected no modal for regular line")
+	}
+	found := false
+	for _, line := range app.log.Lines() {
+		if line == "Removing vim..." {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("expected regular line to be logged")
+	}
+}

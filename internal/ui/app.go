@@ -107,7 +107,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case operationLineMsg:
-		m.log = m.log.appendLine(string(msg))
+		line := string(msg)
+		if line == "PKGSH_SUDO:" && m.state.Operation != nil {
+			modal := newSudoModal()
+			m.modal = &modal
+			return m, nil // pause scanner — modal will resume it
+		}
+		m.log = m.log.appendLine(line)
 		return m, readLineCmd(m.state.Operation)
 
 	case operationDoneMsg:
@@ -132,6 +138,11 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m AppModel) updateModal(msg tea.Msg) (tea.Model, tea.Cmd) {
 	updated, confirmed, cancelled := m.modal.Update(msg)
 	if cancelled {
+		if m.modal.modalType == ModalSudo && m.state.Operation != nil {
+			m.state.Operation.CloseStdin()
+			m.modal = nil
+			return m, readLineCmd(m.state.Operation)
+		}
 		m.modal = nil
 		return m, nil
 	}
@@ -161,7 +172,9 @@ func (m AppModel) updateModal(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m, cmd = m.startNextOp()
 			return m, cmd
 		case ModalSudo:
+			m.state.Operation.SendInput(updated.input + "\n")
 			m.modal = nil
+			return m, readLineCmd(m.state.Operation)
 		case ModalQuitConfirm:
 			return m, tea.Quit
 		}
