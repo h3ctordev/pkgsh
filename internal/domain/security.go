@@ -26,18 +26,18 @@ var systemPackageNames = map[string]bool{
 	"findutils": true,
 	"procps": true,
 	"python3-minimal": true,
+	"python3-apt": true,
 }
 
 // systemPackagePrefixes son prefijos que marcan automáticamente un paquete como del sistema.
 var systemPackagePrefixes = []string{
 	"linux-image-",
 	"linux-headers-",
-	"linux-modules-",
 	"linux-modules-extra-",
+	"linux-modules-",
 	"libc-",
 	"libgcc-",
 	"libstdc++",
-	"python3-apt",
 }
 
 // IsSystemPackage devuelve true si el paquete es considerado crítico del sistema.
