@@ -25,3 +25,21 @@ func TestParseList(t *testing.T) {
 		t.Errorf("expected flathub, got %q", pkgs[0].Origin)
 	}
 }
+
+func TestParseRuntimes(t *testing.T) {
+	raw := "GNOME Platform\torg.gnome.Platform//45\t45\tflathub\n" +
+		"KDE Frameworks\torg.kde.Platform//5.15\t5.15\tflathub\n"
+	pkgs := parseRuntimes(raw)
+	if len(pkgs) != 2 {
+		t.Fatalf("expected 2 runtimes, got %d", len(pkgs))
+	}
+	if !pkgs[0].IsOrphan {
+		t.Error("expected runtime to be marked as IsOrphan")
+	}
+	if pkgs[0].Path != "org.gnome.Platform//45" {
+		t.Errorf("expected Path=org.gnome.Platform//45, got %q", pkgs[0].Path)
+	}
+	if pkgs[0].Manager != domain.ManagerFlatpak {
+		t.Errorf("expected ManagerFlatpak, got %q", pkgs[0].Manager)
+	}
+}
