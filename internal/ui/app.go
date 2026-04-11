@@ -376,7 +376,7 @@ func (m AppModel) View() string {
 	)
 
 	selectionBar := m.viewSelectionBar(m.width)
-	logView := m.log.View(m.width, logHeight, m.state.ActivePanel == domain.PanelLog)
+	logView := m.log.View(m.width, logHeight, m.state.ActivePanel == domain.PanelLog, "")
 	footer := m.viewFooter()
 
 	full := lipgloss.JoinVertical(lipgloss.Left, header, body, selectionBar, logView, footer)
