@@ -19,13 +19,13 @@ const (
 	colorHeaderBg = lipgloss.Color("#161b22") // fondo header
 	colorCursorBg = lipgloss.Color("#1f3d5c") // fondo fila activa
 
-	// Colores por gestor
-	colorApt      = lipgloss.Color("#58a6ff")
-	colorSnap     = lipgloss.Color("#e3b341")
+	// Colores por gestor — alias de la paleta semántica donde coinciden
+	colorApt      = colorPrimary
+	colorSnap     = colorSec
 	colorFlatpak  = lipgloss.Color("#bc8cff")
-	colorNpm      = lipgloss.Color("#3fb950")
-	colorPip      = lipgloss.Color("#f85149")
-	colorDpkg     = lipgloss.Color("#8b949e")
+	colorNpm      = colorGreen
+	colorPip      = colorRed
+	colorDpkg     = colorMuted
 	colorAppImage = lipgloss.Color("#fb8f44")
 )
 
