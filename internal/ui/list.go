@@ -170,8 +170,8 @@ func (lm ListModel) View(width, height int, active bool) string {
 	colSize := 7
 
 	muted := lipgloss.NewStyle().Foreground(colorMuted)
-	header := fmt.Sprintf("  %-*s  %-*s  %-*s  %-*s  %s",
-		colName+4, "Paquete",
+	header := fmt.Sprintf("    %-*s  %-*s  %-*s  %-*s  %s",
+		colName, "Paquete",
 		colVer, "Versión",
 		colMgr, "Gestor",
 		colSize, "Tamaño",
@@ -183,7 +183,7 @@ func (lm ListModel) View(width, height int, active bool) string {
 		muted.Render(sep),
 	}
 
-	// -2 header+sep
+	// -2 header+sep, -2 border
 	visible := height - 4
 	if visible < 1 {
 		visible = 1
@@ -199,30 +199,30 @@ func (lm ListModel) View(width, height int, active bool) string {
 
 	for i := start; i < end; i++ {
 		pkg := lm.items[i]
-		checkbox := "☐"
-		if lm.selected[pkgKey(pkg)] {
-			checkbox = lipgloss.NewStyle().Foreground(colorGreen).Render("☒")
-		}
 		cur := " "
 		if i == lm.cursor {
 			cur = ">"
 		}
+		checkRaw := "☐"
+		if lm.selected[pkgKey(pkg)] {
+			checkRaw = "☒"
+		}
+		coloredCheck := checkRaw
+		if lm.selected[pkgKey(pkg)] {
+			coloredCheck = lipgloss.NewStyle().Foreground(colorGreen).Render(checkRaw)
+		}
 
-		nameStr := truncate(pkg.Name, colName)
-		mgrStr := lipgloss.NewStyle().Foreground(managerColor(pkg.Manager)).Render(
-			truncate(string(pkg.Manager), colMgr),
-		)
-		sizeStr := truncate(formatSize(pkg.Size), colSize)
-		tagsStr := pkgTags(pkg)
+		nameField := fmt.Sprintf("%-*s", colName, truncate(pkg.Name, colName))
+		verField := fmt.Sprintf("%-*s", colVer, truncate(pkg.Version, colVer))
+		// lipgloss.Width handles ANSI codes correctly
+		mgrField := lipgloss.NewStyle().
+			Width(colMgr).
+			Foreground(managerColor(pkg.Manager)).
+			Render(truncate(string(pkg.Manager), colMgr))
+		sizeField := fmt.Sprintf("%-*s", colSize, truncate(formatSize(pkg.Size), colSize))
+		tagsField := pkgTags(pkg)
 
-		row := fmt.Sprintf("%s %s %-*s  %-*s  %-*s  %-*s  %s",
-			cur, checkbox,
-			colName, nameStr,
-			colVer, truncate(pkg.Version, colVer),
-			colMgr, mgrStr,
-			colSize, sizeStr,
-			tagsStr,
-		)
+		row := cur + " " + coloredCheck + " " + nameField + "  " + verField + "  " + mgrField + "  " + sizeField + "  " + tagsField
 
 		if i == lm.cursor {
 			row = lipgloss.NewStyle().
@@ -243,10 +243,11 @@ func (lm ListModel) View(width, height int, active bool) string {
 }
 
 func truncate(s string, max int) string {
-	if len(s) <= max {
+	runes := []rune(s)
+	if len(runes) <= max {
 		return s
 	}
-	return s[:max-1] + "…"
+	return string(runes[:max-1]) + "…"
 }
 
 func listPanelStyle(active bool, width, height int) lipgloss.Style {
