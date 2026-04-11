@@ -25,6 +25,7 @@ type Package struct {
 	Origin      string
 	InstallDate time.Time
 	Path        string
+	IsOrphan    bool
 }
 
 type PackageManager interface {
