@@ -31,6 +31,12 @@ func (a *Adapter) List() ([]domain.Package, error) {
 			pkgs[i].NewVersion = nv
 		}
 	}
+
+	autoOut, _ := adapters.RunCmd([]string{"apt-mark", "showauto"})
+	autoInstalled := parseAutoInstalled(autoOut)
+	for i := range pkgs {
+		pkgs[i].IsOrphan = autoInstalled[pkgs[i].Name]
+	}
 	return pkgs, nil
 }
 
@@ -135,4 +141,14 @@ func parseInfo(out string, base domain.Package) domain.PackageInfo {
 		info.Description += "\n" + strings.Join(descLines, "\n")
 	}
 	return info
+}
+
+func parseAutoInstalled(out string) map[string]bool {
+	result := make(map[string]bool)
+	for _, line := range strings.Split(strings.TrimSpace(out), "\n") {
+		if line = strings.TrimSpace(line); line != "" {
+			result[line] = true
+		}
+	}
+	return result
 }
