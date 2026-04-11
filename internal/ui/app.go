@@ -132,7 +132,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if strings.Contains(line, "PKGSH_SUDO:") && m.state.Operation != nil {
 			modal := newSudoModal()
 			m.modal = &modal
-			return m, nil
+			return m, readLineCmd(m.state.Operation)
 		}
 		m.log = m.log.appendLine(line)
 		return m, readLineCmd(m.state.Operation)
@@ -182,11 +182,6 @@ func logCollapseCmd() tea.Cmd {
 func (m AppModel) updateModal(msg tea.Msg) (tea.Model, tea.Cmd) {
 	updated, confirmed, cancelled := m.modal.Update(msg)
 	if cancelled {
-		if m.modal.modalType == ModalSudo && m.state.Operation != nil {
-			m.state.Operation.CloseStdin()
-			m.modal = nil
-			return m, readLineCmd(m.state.Operation)
-		}
 		m.modal = nil
 		return m, nil
 	}
@@ -231,11 +226,6 @@ func (m AppModel) updateModal(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 
 		case ModalSudo:
-			if m.state.Operation != nil {
-				m.state.Operation.SendInput(updated.input + "\n")
-				m.modal = nil
-				return m, readLineCmd(m.state.Operation)
-			}
 			m.modal = nil
 			return m, nil
 
@@ -484,7 +474,8 @@ func (m AppModel) View() string {
 	listWidth := m.width * 2 / 3
 	detailWidth := m.width - listWidth
 
-	header := m.viewHeader()
+	sel := m.list.AllSelected(m.state.Packages)
+	header := m.viewHeader(len(sel))
 	searchBar := m.viewSearchBar(listWidth)
 	listView := m.list.View(listWidth, topHeight, m.state.ActivePanel == domain.PanelList)
 	detailView := m.detail.View(m.list.CurrentPackage(), detailWidth, topHeight+1, m.state.ActivePanel == domain.PanelDetail)
@@ -494,9 +485,9 @@ func (m AppModel) View() string {
 		detailView,
 	)
 
-	selectionBar := m.viewSelectionBar(m.width)
+	selectionBar := m.viewSelectionBar(m.width, sel)
 	logView := m.log.View(m.width, logHeight, m.state.ActivePanel == domain.PanelLog, m.logTitle())
-	footer := m.viewFooter()
+	footer := m.viewFooter(len(sel))
 
 	full := lipgloss.JoinVertical(lipgloss.Left, header, body, selectionBar, logView, footer)
 
@@ -523,7 +514,7 @@ func (m AppModel) logTitle() string {
 	return fmt.Sprintf("%s %s %s", frame, m.currentManager, cmdName)
 }
 
-func (m AppModel) viewHeader() string {
+func (m AppModel) viewHeader(selCount int) string {
 	tabs := []struct {
 		key     string
 		label   string
@@ -556,8 +547,6 @@ func (m AppModel) viewHeader() string {
 			upgCount++
 		}
 	}
-	selCount := len(m.list.AllSelected(m.state.Packages))
-
 	stats := fmt.Sprintf("%d pkgs", len(m.state.Filtered))
 	if upgCount > 0 {
 		stats += fmt.Sprintf(" · ↑ %d", upgCount)
@@ -597,8 +586,7 @@ func (m AppModel) viewSearchBar(width int) string {
 		Render("> " + query)
 }
 
-func (m AppModel) viewSelectionBar(width int) string {
-	sel := m.list.AllSelected(m.state.Packages)
+func (m AppModel) viewSelectionBar(width int, sel []domain.Package) string {
 	base := lipgloss.NewStyle().Width(width).Padding(0, 1)
 
 	if len(sel) == 0 {
@@ -634,11 +622,11 @@ func (m AppModel) viewSelectionBar(width int) string {
 	return result
 }
 
-func (m AppModel) viewFooter() string {
+func (m AppModel) viewFooter(selCount int) string {
 	var hints string
 	if m.state.Operation != nil {
 		hints = "[?] Ayuda  [PgUp/PgDn] Scroll log  [q] Confirmar salida"
-	} else if len(m.list.AllSelected(m.state.Packages)) > 0 {
+	} else if selCount > 0 {
 		actions := lipgloss.NewStyle().Foreground(colorGreen).Bold(true).Render("[d] Desinstalar  [u] Actualizar")
 		hints = "[?] Ayuda  [/] Buscar  " + actions + "  [Esc] Limpiar"
 	} else {

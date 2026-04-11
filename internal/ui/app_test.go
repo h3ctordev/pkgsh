@@ -89,7 +89,8 @@ func TestApp_FooterWithSelection(t *testing.T) {
 	app := makeApp(pkgs)
 	app.width = 120
 	app.list = app.list.ToggleSelected()
-	footer := app.viewFooter()
+	sel := app.list.AllSelected(app.state.Packages)
+	footer := app.viewFooter(len(sel))
 	if !strings.Contains(footer, "Desinstalar") {
 		t.Errorf("footer should show Desinstalar when items selected, got: %q", footer)
 	}
@@ -98,7 +99,7 @@ func TestApp_FooterWithSelection(t *testing.T) {
 func TestApp_FooterWithoutSelection(t *testing.T) {
 	app := makeApp(nil)
 	app.width = 120
-	footer := app.viewFooter()
+	footer := app.viewFooter(0)
 	if strings.Contains(footer, "Desinstalar") {
 		t.Errorf("footer should not show Desinstalar without selection, got: %q", footer)
 	}

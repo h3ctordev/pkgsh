@@ -6,34 +6,16 @@ import (
 )
 
 type Operation struct {
-	pr      *io.PipeReader
-	pw      *io.PipeWriter
-	stdinPR *io.PipeReader
-	stdinPW *io.PipeWriter
-	mu      sync.Mutex
-	done    bool
-	err     error
+	pr   *io.PipeReader
+	pw   *io.PipeWriter
+	mu   sync.Mutex
+	done bool
+	err  error
 }
 
 func NewOperation() *Operation {
 	pr, pw := io.Pipe()
-	spr, spw := io.Pipe()
-	return &Operation{pr: pr, pw: pw, stdinPR: spr, stdinPW: spw}
-}
-
-// Stdin returns the stdin reader for the child process.
-func (o *Operation) Stdin() io.Reader {
-	return o.stdinPR
-}
-
-// SendInput writes a line of input to the operation's stdin.
-func (o *Operation) SendInput(s string) {
-	o.stdinPW.Write([]byte(s))
-}
-
-// CloseStdin closes the stdin pipe, signaling EOF to the child process.
-func (o *Operation) CloseStdin() {
-	o.stdinPW.Close()
+	return &Operation{pr: pr, pw: pw}
 }
 
 func (o *Operation) Reader() io.Reader {
