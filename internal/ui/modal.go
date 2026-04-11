@@ -14,6 +14,7 @@ const (
 	ModalConfirm ModalType = iota
 	ModalSudo
 	ModalQuitConfirm
+	ModalHelp
 )
 
 type ModalModel struct {
@@ -39,6 +40,10 @@ func newQuitConfirmModal() ModalModel {
 	return ModalModel{modalType: ModalQuitConfirm, title: "Operación en curso"}
 }
 
+func newHelpModal() ModalModel {
+	return ModalModel{modalType: ModalHelp}
+}
+
 // Update processes keypresses for the modal.
 // Returns (updated model, confirmed, cancelled).
 func (m ModalModel) Update(msg tea.Msg) (ModalModel, bool, bool) {
@@ -53,6 +58,12 @@ func (m ModalModel) Update(msg tea.Msg) (ModalModel, bool, bool) {
 		case "s", "y":
 			return m, true, false
 		case "n", "esc":
+			return m, false, true
+		}
+
+	case ModalHelp:
+		switch keyMsg.String() {
+		case "?", "esc":
 			return m, false, true
 		}
 
@@ -97,6 +108,28 @@ func (m ModalModel) View(width int) string {
 			"Se requiere contraseña de sudo:\n\n> %s\n\n[Enter] Confirmar    [Esc] Cancelar",
 			masked,
 		)
+	case ModalHelp:
+		content = `NAVEGACIÓN
+  ↑/k  Subir           ↓/j  Bajar
+  g    Ir al inicio    G    Ir al final
+  Tab  Cambiar panel   1-8  Filtrar por gestor
+
+SELECCIÓN
+  Space  Seleccionar/deseleccionar
+  a      Seleccionar todo visible
+  Esc    Limpiar selección
+
+ACCIONES
+  d  Desinstalar seleccionados
+  u  Actualizar seleccionados
+  r  Recargar lista
+
+BÚSQUEDA
+  /  Buscar           s  Ordenar
+  S  Security mode
+
+APP
+  ?  Ayuda    q  Salir`
 	}
 
 	boxWidth := 50
@@ -106,7 +139,7 @@ func (m ModalModel) View(width int) string {
 
 	box := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("212")).
+		BorderForeground(colorPrimary).
 		Padding(1, 2).
 		Width(boxWidth).
 		Render(content)
