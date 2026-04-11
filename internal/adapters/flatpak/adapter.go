@@ -21,7 +21,13 @@ func (a *Adapter) List() ([]domain.Package, error) {
 	if err != nil {
 		return nil, err
 	}
-	return parseList(out), nil
+	pkgs := parseList(out)
+	rtOut, _ := adapters.RunCmd([]string{
+		"flatpak", "list", "--runtime",
+		"--columns=name,application,version,origin",
+	})
+	pkgs = append(pkgs, parseRuntimes(rtOut)...)
+	return pkgs, nil
 }
 
 func (a *Adapter) Remove(pkgs []domain.Package) *domain.Operation {
@@ -56,6 +62,32 @@ func (a *Adapter) Info(pkg domain.Package) (domain.PackageInfo, error) {
 		}
 	}
 	return info, nil
+}
+
+func parseRuntimes(out string) []domain.Package {
+	var pkgs []domain.Package
+	for _, line := range strings.Split(strings.TrimSpace(out), "\n") {
+		if line == "" {
+			continue
+		}
+		parts := strings.Split(line, "\t")
+		if len(parts) < 3 {
+			continue
+		}
+		origin := ""
+		if len(parts) >= 4 {
+			origin = strings.TrimSpace(parts[3])
+		}
+		pkgs = append(pkgs, domain.Package{
+			Name:     strings.TrimSpace(parts[0]),
+			Path:     strings.TrimSpace(parts[1]),
+			Version:  strings.TrimSpace(parts[2]),
+			Manager:  domain.ManagerFlatpak,
+			Origin:   origin,
+			IsOrphan: true,
+		})
+	}
+	return pkgs
 }
 
 func parseList(out string) []domain.Package {
