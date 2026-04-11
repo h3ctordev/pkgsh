@@ -23,24 +23,28 @@ const (
 )
 
 type AppState struct {
-	Packages    []Package
-	Filtered    []Package
-	Selected    map[int]bool
-	ActiveTab   ManagerType
-	SearchQuery string
-	SortBy      SortField
-	ActivePanel Panel
-	Operation   *Operation
-	LogLines    []string
+	Packages     []Package
+	Filtered     []Package
+	Selected     map[int]bool
+	ActiveTab    ManagerType
+	SearchQuery  string
+	SortBy       SortField
+	ActivePanel  Panel
+	Operation    *Operation
+	LogLines     []string
+	SecurityMode bool
 }
 
-func Filter(pkgs []Package, query string, manager ManagerType) []Package {
+func Filter(pkgs []Package, query string, manager ManagerType, securityMode bool) []Package {
 	out := pkgs[:0:0]
 	for _, p := range pkgs {
 		if manager != "" && p.Manager != manager {
 			continue
 		}
 		if query != "" && !strings.Contains(strings.ToLower(p.Name), strings.ToLower(query)) {
+			continue
+		}
+		if securityMode && IsSystemPackage(p) {
 			continue
 		}
 		out = append(out, p)

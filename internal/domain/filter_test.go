@@ -38,16 +38,29 @@ func TestSortByManager(t *testing.T) {
 }
 
 func TestFilterByManager(t *testing.T) {
-	filtered := domain.Filter(testPkgs(), "", domain.ManagerNpm)
+	filtered := domain.Filter(testPkgs(), "", domain.ManagerNpm, false)
 	if len(filtered) != 1 || filtered[0].Name != "node" {
 		t.Errorf("expected 1 npm package, got %v", filtered)
 	}
 }
 
 func TestFilterByQuery(t *testing.T) {
-	filtered := domain.Filter(testPkgs(), "fire", "")
+	filtered := domain.Filter(testPkgs(), "fire", "", false)
 	if len(filtered) != 1 || filtered[0].Name != "firefox" {
 		t.Errorf("expected firefox, got %v", filtered)
+	}
+}
+
+func TestFilterSecurityMode(t *testing.T) {
+	pkgs := []domain.Package{
+		{Name: "bash", Manager: domain.ManagerApt, Version: "5.2"},
+		{Name: "firefox", Manager: domain.ManagerApt, Version: "126.0"},
+	}
+	filtered := domain.Filter(pkgs, "", "", true)
+	for _, p := range filtered {
+		if domain.IsSystemPackage(p) {
+			t.Errorf("security mode should exclude system packages, got %s", p.Name)
+		}
 	}
 }
 
