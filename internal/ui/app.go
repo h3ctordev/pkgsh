@@ -11,10 +11,11 @@ import (
 
 // Options configuran el arranque de la aplicación (desde flags CLI).
 type Options struct {
-	Manager     domain.ManagerType
-	Upgradeable bool
-	Native      bool
-	Search      string
+	Manager      domain.ManagerType
+	Upgradeable  bool
+	Native       bool
+	Search       string
+	SecurityMode bool
 }
 
 type opKind int
@@ -46,15 +47,16 @@ type AppModel struct {
 
 func New(pkgs []domain.Package, adapters map[domain.ManagerType]domain.PackageManager, opts Options) AppModel {
 	state := domain.AppState{
-		Packages:    pkgs,
-		Selected:    make(map[int]bool),
-		SortBy:      domain.SortByName,
-		ActivePanel: domain.PanelList,
-		SearchQuery: opts.Search,
-		ActiveTab:   opts.Manager,
+		Packages:     pkgs,
+		Selected:     make(map[int]bool),
+		SortBy:       domain.SortByName,
+		ActivePanel:  domain.PanelList,
+		SearchQuery:  opts.Search,
+		ActiveTab:    opts.Manager,
+		SecurityMode: opts.SecurityMode,
 	}
 
-	filtered := domain.Filter(pkgs, state.SearchQuery, state.ActiveTab)
+	filtered := domain.Filter(pkgs, state.SearchQuery, state.ActiveTab, state.SecurityMode)
 	if opts.Upgradeable {
 		filtered = filterUpgradeable(filtered)
 	}
@@ -157,6 +159,22 @@ func (m AppModel) updateModal(msg tea.Msg) (tea.Model, tea.Cmd) {
 			sel := m.list.AllSelected(m.state.Packages)
 			m.list = m.list.ClearSelection()
 			m.modal = nil
+
+			// Bloqueo activo: filtrar paquetes del sistema cuando security mode está activo
+			if m.state.SecurityMode {
+				var allowed []domain.Package
+				for _, p := range sel {
+					if domain.IsSystemPackage(p) {
+						m.log = m.log.appendLine(fmt.Sprintf("[SECURITY] %s: paquete del sistema, operación bloqueada", p.Name))
+					} else {
+						allowed = append(allowed, p)
+					}
+				}
+				sel = allowed
+			}
+			if len(sel) == 0 {
+				return m, nil
+			}
 
 			// Agrupar por manager en orden canónico
 			order := []domain.ManagerType{
@@ -267,6 +285,10 @@ func (m AppModel) updateKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.state.SortBy = (m.state.SortBy + 1) % 4
 			m = m.applyFilter()
 
+		case "S":
+			m.state.SecurityMode = !m.state.SecurityMode
+			m = m.applyFilter()
+
 		case "d":
 			sel := m.list.AllSelected(m.state.Packages)
 			if len(sel) == 0 {
@@ -322,7 +344,7 @@ func (m AppModel) updateKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m AppModel) applyFilter() AppModel {
-	filtered := domain.Filter(m.state.Packages, m.state.SearchQuery, m.state.ActiveTab)
+	filtered := domain.Filter(m.state.Packages, m.state.SearchQuery, m.state.ActiveTab, m.state.SecurityMode)
 	filtered = domain.Sort(filtered, m.state.SortBy)
 	m.state.Filtered = filtered
 	m.list = m.list.SetItems(filtered)
@@ -488,10 +510,23 @@ func (m AppModel) viewSelectionBar(width int) string {
 }
 
 func (m AppModel) viewFooter() string {
-	hints := "[/] Buscar  [Tab] Panel  [Space] Sel  [a] Todo  [Esc] Limpiar  [d] Desinstalar  [u] Actualizar  [s] Ordenar  [q] Salir"
-	return lipgloss.NewStyle().
-		Width(m.width).
+	hints := "[/] Buscar  [Tab] Panel  [Space] Sel  [a] Todo  [Esc] Limpiar  [d] Desinstalar  [u] Actualizar  [s] Ordenar  [S] Seg  [q] Salir"
+
+	badgeStr := ""
+	badgeWidth := 0
+	if m.state.SecurityMode {
+		badgeStr = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("214")).Render("[SEC]")
+		badgeWidth = 7 // "[SEC]" (5) + "  " (2)
+	}
+
+	footer := lipgloss.NewStyle().
+		Width(m.width - badgeWidth).
 		Faint(true).
 		Padding(0, 1).
 		Render(hints)
+
+	if badgeWidth > 0 {
+		return badgeStr + "  " + footer
+	}
+	return footer
 }
