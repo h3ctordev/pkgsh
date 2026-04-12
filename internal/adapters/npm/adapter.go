@@ -2,6 +2,8 @@ package npm
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/hbustos/pkgsh/internal/adapters"
@@ -19,7 +21,22 @@ func (a *Adapter) List() ([]domain.Package, error) {
 	if err != nil && out == "" {
 		return nil, err
 	}
-	return parseList(out)
+	pkgs, err := parseList(out)
+	if err != nil {
+		return nil, err
+	}
+
+	rootOut, _ := adapters.RunCmd([]string{"npm", "root", "-g"})
+	npmRoot := strings.TrimSpace(rootOut)
+	if npmRoot != "" {
+		for i := range pkgs {
+			if info, err := os.Stat(filepath.Join(npmRoot, pkgs[i].Name)); err == nil {
+				pkgs[i].InstallDate = info.ModTime()
+			}
+		}
+	}
+
+	return pkgs, nil
 }
 
 func (a *Adapter) Remove(pkgs []domain.Package) *domain.Operation {

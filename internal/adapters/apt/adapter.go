@@ -8,6 +8,7 @@ import (
 	"github.com/hbustos/pkgsh/internal/domain"
 )
 
+
 type Adapter struct{}
 
 func New() *Adapter { return &Adapter{} }
@@ -37,6 +38,12 @@ func (a *Adapter) List() ([]domain.Package, error) {
 	for i := range pkgs {
 		pkgs[i].IsOrphan = autoInstalled[pkgs[i].Name]
 	}
+
+	dates := adapters.ParseDpkgLog()
+	for i := range pkgs {
+		pkgs[i].InstallDate = dates[pkgs[i].Name]
+	}
+
 	return pkgs, nil
 }
 

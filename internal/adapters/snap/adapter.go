@@ -1,6 +1,7 @@
 package snap
 
 import (
+	"os"
 	"strings"
 
 	"github.com/hbustos/pkgsh/internal/adapters"
@@ -18,7 +19,14 @@ func (a *Adapter) List() ([]domain.Package, error) {
 	if err != nil {
 		return nil, err
 	}
-	return parseList(out), nil
+	pkgs := parseList(out)
+	for i := range pkgs {
+		info, err := os.Lstat("/snap/" + pkgs[i].Name + "/current")
+		if err == nil {
+			pkgs[i].InstallDate = info.ModTime()
+		}
+	}
+	return pkgs, nil
 }
 
 func (a *Adapter) Remove(pkgs []domain.Package) *domain.Operation {

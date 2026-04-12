@@ -1,6 +1,8 @@
 package flatpak
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/hbustos/pkgsh/internal/adapters"
@@ -27,6 +29,21 @@ func (a *Adapter) List() ([]domain.Package, error) {
 		"--columns=name,application,version,origin",
 	})
 	pkgs = append(pkgs, parseRuntimes(rtOut)...)
+
+	home := os.Getenv("HOME")
+	for i := range pkgs {
+		dirs := []string{
+			"/var/lib/flatpak/app/" + pkgs[i].Path,
+			filepath.Join(home, ".local/share/flatpak/app/", pkgs[i].Path),
+		}
+		for _, d := range dirs {
+			if info, err := os.Stat(d); err == nil {
+				pkgs[i].InstallDate = info.ModTime()
+				break
+			}
+		}
+	}
+
 	return pkgs, nil
 }
 
