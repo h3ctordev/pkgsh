@@ -7,21 +7,47 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-func TestConfirmModal_Confirm(t *testing.T) {
-	m := newConfirmModal("Desinstalar", "vlc, firefox")
-	m2, confirmed, cancelled := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
-	_ = m2
-	if !confirmed {
-		t.Error("expected confirmed=true on 's'")
+func TestModalHelp_RendersContent(t *testing.T) {
+	m := newHelpModal()
+	out := m.View(80)
+	if !strings.Contains(out, "NAVEGACIÓN") {
+		t.Errorf("help modal should contain NAVEGACIÓN, got: %q", out)
 	}
-	if cancelled {
-		t.Error("expected cancelled=false on 's'")
+	if !strings.Contains(out, "SELECCIÓN") {
+		t.Errorf("help modal should contain SELECCIÓN, got: %q", out)
 	}
 }
 
-func TestConfirmModal_Cancel(t *testing.T) {
+func TestModalHelp_ClosesOnQuestionMark(t *testing.T) {
+	m := newHelpModal()
+	_, confirmed, cancelled := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("?")})
+	if confirmed {
+		t.Error("help modal should not confirm on ?")
+	}
+	if !cancelled {
+		t.Error("help modal should cancel (close) on ?")
+	}
+}
+
+func TestModalHelp_ClosesOnEsc(t *testing.T) {
+	m := newHelpModal()
+	_, _, cancelled := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	if !cancelled {
+		t.Error("help modal should cancel on Esc")
+	}
+}
+
+func TestModalConfirm_Confirm(t *testing.T) {
+	m := newConfirmModal("Test", "pkg1, pkg2")
+	_, confirmed, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("s")})
+	if !confirmed {
+		t.Error("confirm modal should confirm on 's'")
+	}
+}
+
+func TestModalConfirm_Cancel(t *testing.T) {
 	m := newConfirmModal("Desinstalar", "vlc")
-	_, confirmed, cancelled := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
+	_, confirmed, cancelled := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("n")})
 	if confirmed {
 		t.Error("expected confirmed=false on 'n'")
 	}
@@ -30,7 +56,7 @@ func TestConfirmModal_Cancel(t *testing.T) {
 	}
 }
 
-func TestConfirmModal_EscCancels(t *testing.T) {
+func TestModalConfirm_EscCancels(t *testing.T) {
 	m := newConfirmModal("Desinstalar", "vlc")
 	_, confirmed, cancelled := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
 	if confirmed || !cancelled {
@@ -40,7 +66,7 @@ func TestConfirmModal_EscCancels(t *testing.T) {
 
 func TestSudoModal_Input(t *testing.T) {
 	m := newSudoModal()
-	m2, _, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}})
+	m2, _, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("p")})
 	if m2.input != "p" {
 		t.Errorf("expected input 'p', got %q", m2.input)
 	}
@@ -48,8 +74,8 @@ func TestSudoModal_Input(t *testing.T) {
 
 func TestSudoModal_Backspace(t *testing.T) {
 	m := newSudoModal()
-	m, _, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
-	m, _, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'b'}})
+	m, _, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("a")})
+	m, _, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("b")})
 	m, _, _ = m.Update(tea.KeyMsg{Type: tea.KeyBackspace})
 	if m.input != "a" {
 		t.Errorf("expected 'a' after backspace, got %q", m.input)

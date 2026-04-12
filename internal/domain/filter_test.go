@@ -51,6 +51,19 @@ func TestFilterByQuery(t *testing.T) {
 	}
 }
 
+func TestFilterSecurityMode(t *testing.T) {
+	pkgs := []domain.Package{
+		{Name: "bash", Manager: domain.ManagerApt, Version: "5.2"},
+		{Name: "firefox", Manager: domain.ManagerApt, Version: "126.0"},
+	}
+	filtered := domain.Filter(pkgs, "", "", true)
+	for _, p := range filtered {
+		if domain.IsSystemPackage(p) {
+			t.Errorf("security mode should exclude system packages, got %s", p.Name)
+		}
+	}
+}
+
 func namesOf(pkgs []domain.Package) []string {
 	out := make([]string, len(pkgs))
 	for i, p := range pkgs {
