@@ -187,12 +187,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.loadedCount++
 		if m.loadedCount >= m.totalAdapters {
 			m.loading = false
+			m.state.Packages = domain.DeduplicatePackages(m.state.Packages)
 			m = m.applyFilter()
 		}
 		return m, nil
 
 	case packagesReloadedMsg:
-		m.state.Packages = msg.pkgs
+		m.state.Packages = domain.DeduplicatePackages(msg.pkgs)
 		m = m.applyFilter()
 		return m, nil
 

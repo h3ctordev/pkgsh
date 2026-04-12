@@ -9,6 +9,13 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.2.1] - 2026-04-12
+
+### Fixed
+- **Paquetes duplicados apt/dpkg** — `DeduplicatePackages` nunca se invocaba tras el refactor de carga progresiva que eliminó `loadPackages()` de `main.go`. Ahora se llama en los dos puntos donde se consolidan los paquetes: al terminar la carga inicial y tras cada recarga post-operación.
+
+---
+
 ## [0.2.0] - 2026-04-11
 
 ### Added
