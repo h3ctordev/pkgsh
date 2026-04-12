@@ -8,6 +8,7 @@ import (
 	"github.com/hbustos/pkgsh/internal/domain"
 )
 
+
 type Adapter struct{}
 
 func New() *Adapter { return &Adapter{} }
@@ -31,28 +32,38 @@ func (a *Adapter) List() ([]domain.Package, error) {
 			pkgs[i].NewVersion = nv
 		}
 	}
+
+	autoOut, _ := adapters.RunCmd([]string{"apt-mark", "showauto"})
+	autoInstalled := parseAutoInstalled(autoOut)
+	for i := range pkgs {
+		pkgs[i].IsOrphan = autoInstalled[pkgs[i].Name]
+	}
+
+	dates := adapters.ParseDpkgLog()
+	for i := range pkgs {
+		pkgs[i].InstallDate = dates[pkgs[i].Name]
+	}
+
 	return pkgs, nil
 }
 
 func (a *Adapter) Remove(pkgs []domain.Package) *domain.Operation {
 	op := domain.NewOperation()
-	args := make([]string, 0, len(pkgs)+3)
-	args = append(args, "sudo", "apt", "remove", "-y")
+	args := []string{"sudo", "-S", "-p", "PKGSH_SUDO:\n", "apt", "remove", "-y"}
 	for _, p := range pkgs {
 		args = append(args, p.Name)
 	}
-	go adapters.StreamCmd(args, op.Writer())
+	go adapters.StreamCmdStdin(args, op.StdinReader(), op.Writer())
 	return op
 }
 
 func (a *Adapter) Update(pkgs []domain.Package) *domain.Operation {
 	op := domain.NewOperation()
-	args := make([]string, 0, len(pkgs)+4)
-	args = append(args, "sudo", "apt", "install", "--only-upgrade", "-y")
+	args := []string{"sudo", "-S", "-p", "PKGSH_SUDO:\n", "apt", "install", "--only-upgrade", "-y"}
 	for _, p := range pkgs {
 		args = append(args, p.Name)
 	}
-	go adapters.StreamCmd(args, op.Writer())
+	go adapters.StreamCmdStdin(args, op.StdinReader(), op.Writer())
 	return op
 }
 
@@ -135,4 +146,14 @@ func parseInfo(out string, base domain.Package) domain.PackageInfo {
 		info.Description += "\n" + strings.Join(descLines, "\n")
 	}
 	return info
+}
+
+func parseAutoInstalled(out string) map[string]bool {
+	result := make(map[string]bool)
+	for _, line := range strings.Split(strings.TrimSpace(out), "\n") {
+		if line = strings.TrimSpace(line); line != "" {
+			result[line] = true
+		}
+	}
+	return result
 }

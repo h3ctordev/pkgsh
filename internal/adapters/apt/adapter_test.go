@@ -53,3 +53,34 @@ Homepage: https://www.mozilla.org
 		t.Errorf("expected description to contain Firefox, got %q", info.Description)
 	}
 }
+
+func TestParseAutoInstalled(t *testing.T) {
+	raw := "libssl3\nlibgcc-s1\nlibc6\n"
+	result := parseAutoInstalled(raw)
+	if !result["libssl3"] {
+		t.Error("expected libssl3 to be auto-installed")
+	}
+	if !result["libc6"] {
+		t.Error("expected libc6 to be auto-installed")
+	}
+	if result["firefox"] {
+		t.Error("firefox should not be in auto-installed set")
+	}
+}
+
+func TestListSetsIsOrphan(t *testing.T) {
+	raw := "firefox\t126.0\t239616\tubuntu\ncurl\t7.88.1\t512\tubuntu\n"
+	pkgs := parseList(raw)
+	autoInstalled := parseAutoInstalled("curl\n")
+	for i := range pkgs {
+		pkgs[i].IsOrphan = autoInstalled[pkgs[i].Name]
+	}
+	ff := pkgs[0]
+	cu := pkgs[1]
+	if ff.IsOrphan {
+		t.Error("firefox should not be orphan")
+	}
+	if !cu.IsOrphan {
+		t.Error("curl should be orphan")
+	}
+}

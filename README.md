@@ -3,21 +3,19 @@
 Gestor unificado de paquetes para Ubuntu/Debian con interfaz TUI. Abstrae apt, snap, flatpak, dpkg, pip, npm y AppImage en una sola experiencia de terminal.
 
 ```
-┌─ pkgsh ─────────────────────────────────────────────────────────────────────────────┐
-│ [1] Todos  [2] apt  [3] snap  [4] flatpak  [5] dpkg  [6] pip  [7] npm  [8] AppImage │
-├──────────────────────────────────┬──────────────────────────────────────────────────┤
-│ > Buscar: ___________________    │  DETALLE                                         │
-├──────────────────────────────────┤  Nombre:   firefox                               │
-│ ☐ firefox          apt  126.0 ↑  │  Versión:  126.0.1                               │
-│ ☐ snapd            snap  2.63    │  Origen:   apt (ubuntu)                          │
-│ ☒ vlc              apt  3.0.2    │  Tamaño:   234 MB                                │
-│ ☒ node             npm  20.1     │  Nativo:   Sí                                    │
-│ ☐ spotify          snap  1.2     │  Desc:     Web browser                           │
-├──────────────────────────────────┴──────────────────────────────────────────────────┤
-│ LOG OUTPUT                                                                          │
-│ Removing vlc... done.                                                               │
-└─────────────────────────────────────────────────────────────────────────────────────┘
-│ [/] Buscar  [Tab] Panel  [Space] Sel  [d] Desinstalar  [u] Actualizar  [q] Salir    │
+ pkgsh  312 paquetes  ·  4 actualizables  ·  12 huérfanos              [SEC]
+─────────────────────────────────────────────────────────────────────────────
+ > Buscar: ______________
+─────────────────────────────────────────────────────────────────────────────
+  NOMBRE              VERSIÓN     GESTOR     TAMAÑO    TAGS      INSTALADO
+  ──────────────────────────────────────────────────────────────────────────
+  ☐ firefox           126.0.1     apt        234 MB    UPD       2024-01-15
+  ☐ snapd             2.63        snap        89 MB              2023-11-02
+  ☒ vlc               3.0.21      apt         67 MB    ORP       2023-08-20
+  ☒ node              20.1.0      npm          —                 2024-02-01
+  ☐ spotify           1.2.31      snap       180 MB              2023-09-10
+─────────────────────────────────────────────────────────────────────────────
+ [/] Buscar  [Space] Sel  [d] Desinstalar  [u] Actualizar  [r] Recargar  [?] Ayuda
 ```
 
 ## Instalación
@@ -49,30 +47,47 @@ sudo mv pkgsh /usr/local/bin/
 ## Uso
 
 ```bash
-pkgsh                          # vista completa, todos los gestores
-pkgsh --manager apt            # arrancar filtrado a apt
-pkgsh --manager pip,npm        # arrancar con pip y npm activos
-pkgsh --upgradeable            # solo paquetes con actualizaciones disponibles
-pkgsh --native                 # solo paquetes nativos del OS
-pkgsh --search firefox         # arrancar con búsqueda activa
+pkgsh                            # vista completa, todos los gestores
+pkgsh --manager apt              # arrancar filtrado a apt
+pkgsh --manager pip,npm          # arrancar con pip y npm activos
+pkgsh --upgradeable              # solo paquetes con actualizaciones disponibles
+pkgsh --native                   # solo paquetes nativos del OS
+pkgsh --search firefox           # arrancar con búsqueda activa
+pkgsh --no-security-mode         # desactivar bloqueo de paquetes del sistema
+pkgsh --version                  # mostrar versión instalada
 ```
 
 ## Keybindings
 
-| Tecla     | Acción                                                        |
-|-----------|---------------------------------------------------------------|
-| `↑↓`      | Navegar la lista                                              |
-| `Space`   | Marcar/desmarcar paquete para operación en lote               |
-| `a`       | Seleccionar todos los paquetes visibles                       |
-| `Esc`     | Limpiar selección                                             |
-| `d`       | Desinstalar seleccionado(s) — pide confirmación               |
-| `u`       | Actualizar seleccionado(s) — pide confirmación                |
-| `s`       | Ciclar ordenamiento: nombre → gestor → versión → tamaño       |
-| `/`       | Activar búsqueda                                              |
-| `Tab`     | Cambiar panel activo                                          |
-| `[1-8]`   | Filtrar por gestor (1=Todos, 2=apt … 8=AppImage)              |
-| `q`       | Salir                                                         |
-| `Ctrl+C`  | Salir inmediatamente                                          |
+| Tecla      | Acción                                                       |
+|------------|--------------------------------------------------------------|
+| `↑↓` / `jk` | Navegar la lista                                            |
+| `g` / `G`  | Ir al primer / último paquete                                |
+| `Space`    | Marcar/desmarcar paquete para operación en lote              |
+| `a`        | Seleccionar todos los paquetes visibles                      |
+| `Esc`      | Limpiar selección                                            |
+| `d`        | Desinstalar seleccionado(s) — pide confirmación              |
+| `u`        | Actualizar seleccionado(s) — pide confirmación               |
+| `s`        | Ciclar ordenamiento: nombre → gestor → versión → tamaño      |
+| `S`        | Activar/desactivar Security Mode                             |
+| `/`        | Activar búsqueda                                             |
+| `r`        | Recargar lista de paquetes                                   |
+| `?`        | Abrir ayuda con todos los atajos                             |
+| `Tab`      | Cambiar panel activo                                         |
+| `[1-8]`    | Filtrar por gestor (1=Todos, 2=apt … 8=AppImage)             |
+| `q`        | Salir                                                        |
+| `Ctrl+C`   | Salir inmediatamente                                         |
+
+## Security Mode
+
+Activado por defecto. Oculta los paquetes del sistema (kernel, libc, systemd…) y bloquea operaciones sobre ellos para evitar daños accidentales. El badge `[SEC]` en el header indica que está activo.
+
+```bash
+pkgsh                   # security mode ON (por defecto)
+pkgsh --no-security-mode  # sin restricciones
+```
+
+Dentro de la TUI, `S` alterna el modo en caliente.
 
 ## Arquitectura
 
@@ -115,6 +130,18 @@ nfpm package --packager deb --target dist/
 3. Registrar en `cmd/pkgsh/main.go`
 
 No se modifica ninguna otra capa.
+
+## Roadmap
+
+Funcionalidades planeadas para versiones futuras:
+
+| Feature | Descripción |
+|---------|-------------|
+| **Búsqueda e instalación** | Buscar paquetes en repositorios remotos (apt, snap, flatpak…) e instalar directamente desde la TUI |
+| **Historial de operaciones** | Log persistente en disco de cada install/remove/update con timestamp y resultado |
+| **Menú de configuración** | Panel de ajustes accesible desde la TUI: gestores activos, comportamiento de SecurityMode, preferencias de UI |
+| **Temas y paletas de color** | Soporte para múltiples temas (GitHub Dark, Dracula, Solarized…) y cambio de paleta en caliente |
+| **Multi-idioma (i18n)** | Interfaz disponible en inglés, español y otros idiomas configurables |
 
 ## Licencia
 

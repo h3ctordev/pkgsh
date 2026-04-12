@@ -73,13 +73,17 @@ func scanDir(dir string) []domain.Package {
 			size = info.Size()
 		}
 		name, version := parseAppImageName(e.Name())
-		pkgs = append(pkgs, domain.Package{
+		pkg := domain.Package{
 			Name:    name,
 			Version: version,
 			Manager: domain.ManagerAppImage,
 			Size:    size,
 			Path:    path,
-		})
+		}
+		if info2, err := os.Stat(path); err == nil {
+			pkg.InstallDate = info2.ModTime()
+		}
+		pkgs = append(pkgs, pkg)
 	}
 	return pkgs
 }
