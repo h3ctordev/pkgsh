@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"sync"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/hbustos/pkgsh/internal/adapters/appimage"
@@ -60,47 +59,9 @@ func main() {
 		domain.ManagerAppImage: appimage.New(),
 	}
 
-	pkgs := loadPackages(adapterMap)
-
-	p := tea.NewProgram(ui.New(pkgs, adapterMap, opts), tea.WithAltScreen())
+	p := tea.NewProgram(ui.New(nil, adapterMap, opts), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
-}
-
-// loadPackages ejecuta todos los adapters en paralelo y combina los resultados.
-// Los errores por adapter no disponible se ignoran silenciosamente.
-func loadPackages(adapters map[domain.ManagerType]domain.PackageManager) []domain.Package {
-	type result struct {
-		pkgs []domain.Package
-	}
-
-	managers := []domain.PackageManager{
-		adapters[domain.ManagerApt],
-		adapters[domain.ManagerSnap],
-		adapters[domain.ManagerFlatpak],
-		adapters[domain.ManagerDpkg],
-		adapters[domain.ManagerPip],
-		adapters[domain.ManagerNpm],
-		adapters[domain.ManagerAppImage],
-	}
-
-	results := make([]result, len(managers))
-	var wg sync.WaitGroup
-	for i, mgr := range managers {
-		wg.Add(1)
-		go func(idx int, m domain.PackageManager) {
-			defer wg.Done()
-			pkgs, _ := m.List()
-			results[idx] = result{pkgs: pkgs}
-		}(i, mgr)
-	}
-	wg.Wait()
-
-	var all []domain.Package
-	for _, r := range results {
-		all = append(all, r.pkgs...)
-	}
-	return domain.DeduplicatePackages(all)
 }

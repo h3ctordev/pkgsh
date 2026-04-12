@@ -434,3 +434,95 @@ func TestApp_SecurityModeToggle(t *testing.T) {
 		t.Fatalf("expected 1 package after re-enabling security mode, got %d", len(app.state.Filtered))
 	}
 }
+
+func TestApp_ProgressiveLoad_InitialState(t *testing.T) {
+	adapters := map[domain.ManagerType]domain.PackageManager{
+		domain.ManagerApt: &fakeAdapter{manager: domain.ManagerApt},
+		domain.ManagerNpm: &fakeAdapter{manager: domain.ManagerNpm},
+	}
+	app := New(nil, adapters, Options{})
+
+	if !app.loading {
+		t.Fatal("expected loading=true when pkgs=nil and adapters provided")
+	}
+	if app.totalAdapters != 2 {
+		t.Fatalf("expected totalAdapters=2, got %d", app.totalAdapters)
+	}
+	if app.loadedCount != 0 {
+		t.Fatalf("expected loadedCount=0, got %d", app.loadedCount)
+	}
+}
+
+func TestApp_ProgressiveLoad_AccumulatesAndFinishes(t *testing.T) {
+	adapters := map[domain.ManagerType]domain.PackageManager{
+		domain.ManagerApt: &fakeAdapter{manager: domain.ManagerApt},
+		domain.ManagerNpm: &fakeAdapter{manager: domain.ManagerNpm},
+	}
+	app := New(nil, adapters, Options{})
+
+	aptPkgs := []domain.Package{{Name: "vim", Manager: domain.ManagerApt, Version: "9.0"}}
+	model, _ := app.Update(packagesLoadedMsg{manager: domain.ManagerApt, pkgs: aptPkgs})
+	app = model.(AppModel)
+
+	if !app.loading {
+		t.Fatal("expected still loading after 1 of 2")
+	}
+	if len(app.state.Packages) != 1 {
+		t.Fatalf("expected 1 accumulated package, got %d", len(app.state.Packages))
+	}
+	if len(app.state.Filtered) != 0 {
+		t.Fatal("expected filtered empty until all loaded")
+	}
+
+	npmPkgs := []domain.Package{{Name: "lodash", Manager: domain.ManagerNpm, Version: "4.0"}}
+	model, _ = app.Update(packagesLoadedMsg{manager: domain.ManagerNpm, pkgs: npmPkgs})
+	app = model.(AppModel)
+
+	if app.loading {
+		t.Fatal("expected loading=false after all adapters loaded")
+	}
+	if len(app.state.Packages) != 2 {
+		t.Fatalf("expected 2 packages, got %d", len(app.state.Packages))
+	}
+	if len(app.state.Filtered) != 2 {
+		t.Fatalf("expected 2 filtered packages, got %d", len(app.state.Filtered))
+	}
+}
+
+func TestApp_ViewFooter_ShowsProgressBar(t *testing.T) {
+	adapters := map[domain.ManagerType]domain.PackageManager{
+		domain.ManagerApt: &fakeAdapter{manager: domain.ManagerApt},
+		domain.ManagerNpm: &fakeAdapter{manager: domain.ManagerNpm},
+	}
+	app := New(nil, adapters, Options{})
+	app.width = 80
+
+	footer := app.viewFooter(0)
+	if !strings.Contains(footer, "Cargando") {
+		t.Fatalf("expected 'Cargando' in footer during load, got: %q", footer)
+	}
+	if !strings.Contains(footer, "0/2") {
+		t.Fatalf("expected '0/2' progress in footer, got: %q", footer)
+	}
+
+	model, _ := app.Update(packagesLoadedMsg{manager: domain.ManagerApt, pkgs: nil})
+	app = model.(AppModel)
+
+	footer = app.viewFooter(0)
+	if !strings.Contains(footer, "1/2") {
+		t.Fatalf("expected '1/2' progress after one load, got: %q", footer)
+	}
+}
+
+func TestApp_ViewFooter_ShowsHintsWhenDone(t *testing.T) {
+	app := makeApp(makePackages("vim"))
+	app.width = 80
+
+	footer := app.viewFooter(0)
+	if strings.Contains(footer, "Cargando") {
+		t.Fatalf("expected normal hints footer, got: %q", footer)
+	}
+	if !strings.Contains(footer, "Buscar") {
+		t.Fatalf("expected hints in footer, got: %q", footer)
+	}
+}

@@ -48,6 +48,21 @@ type AppModel struct {
 	currentManager domain.ManagerType
 	logCollapsed   bool
 	spinnerFrame   int
+	loading        bool
+	loadedCount    int
+	totalAdapters  int
+}
+
+type packagesLoadedMsg struct {
+	manager domain.ManagerType
+	pkgs    []domain.Package
+}
+
+func loadAdapterCmd(mgr domain.ManagerType, adapter domain.PackageManager) tea.Cmd {
+	return func() tea.Msg {
+		pkgs, _ := adapter.List()
+		return packagesLoadedMsg{manager: mgr, pkgs: pkgs}
+	}
 }
 
 func New(pkgs []domain.Package, adapters map[domain.ManagerType]domain.PackageManager, opts Options) AppModel {
@@ -71,7 +86,7 @@ func New(pkgs []domain.Package, adapters map[domain.ManagerType]domain.PackageMa
 	filtered = domain.Sort(filtered, state.SortBy)
 	state.Filtered = filtered
 
-	return AppModel{
+	m := AppModel{
 		state:        state,
 		list:         newListModel().SetItems(filtered),
 		detail:       newDetailModel(),
@@ -79,6 +94,13 @@ func New(pkgs []domain.Package, adapters map[domain.ManagerType]domain.PackageMa
 		adapters:     adapters,
 		logCollapsed: true,
 	}
+
+	if pkgs == nil && len(adapters) > 0 {
+		m.loading = true
+		m.totalAdapters = len(adapters)
+	}
+
+	return m
 }
 
 func filterUpgradeable(pkgs []domain.Package) []domain.Package {
@@ -101,7 +123,16 @@ func filterNative(pkgs []domain.Package) []domain.Package {
 	return out
 }
 
-func (m AppModel) Init() tea.Cmd { return nil }
+func (m AppModel) Init() tea.Cmd {
+	if !m.loading {
+		return nil
+	}
+	cmds := make([]tea.Cmd, 0, len(m.adapters))
+	for mgr, adapter := range m.adapters {
+		cmds = append(cmds, loadAdapterCmd(mgr, adapter))
+	}
+	return tea.Batch(cmds...)
+}
 
 func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if m.modal != nil {
@@ -150,6 +181,15 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Batch(cmd, logCollapseCmd())
 		}
 		return m, cmd
+
+	case packagesLoadedMsg:
+		m.state.Packages = append(m.state.Packages, msg.pkgs...)
+		m.loadedCount++
+		if m.loadedCount >= m.totalAdapters {
+			m.loading = false
+			m = m.applyFilter()
+		}
+		return m, nil
 
 	case packagesReloadedMsg:
 		m.state.Packages = msg.pkgs
@@ -269,6 +309,12 @@ func (m AppModel) updateSearch(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m AppModel) updateKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.loading {
+		if msg.Type == tea.KeyCtrlC {
+			return m, tea.Quit
+		}
+		return m, nil
+	}
 	switch msg.Type {
 	case tea.KeyCtrlC:
 		return m, tea.Quit
@@ -639,6 +685,19 @@ func (m AppModel) viewSelectionBar(width int, sel []domain.Package) string {
 }
 
 func (m AppModel) viewFooter(selCount int) string {
+	base := lipgloss.NewStyle().Width(m.width).Foreground(colorMuted).Faint(true).Padding(0, 1)
+	if m.loading {
+		filled := 0
+		if m.totalAdapters > 0 {
+			filled = m.loadedCount * 7 / m.totalAdapters
+			if filled > 7 {
+				filled = 7
+			}
+		}
+		bar := strings.Repeat("█", filled) + strings.Repeat("░", 7-filled)
+		return base.Render(fmt.Sprintf("Cargando... [%s] %d/%d", bar, m.loadedCount, m.totalAdapters))
+	}
+
 	var hints string
 	if m.state.Operation != nil {
 		hints = "[?] Ayuda  [PgUp/PgDn] Scroll log  [q] Confirmar salida"
@@ -654,10 +713,5 @@ func (m AppModel) viewFooter(selCount int) string {
 		hints += "  " + sec
 	}
 
-	return lipgloss.NewStyle().
-		Width(m.width).
-		Foreground(colorMuted).
-		Faint(true).
-		Padding(0, 1).
-		Render(hints)
+	return base.Render(hints)
 }
