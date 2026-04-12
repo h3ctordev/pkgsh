@@ -34,7 +34,7 @@ func (a *Adapter) Remove(pkgs []domain.Package) *domain.Operation {
 	op := domain.NewOperation()
 	args := []string{"flatpak", "uninstall", "-y"}
 	for _, p := range pkgs {
-		args = append(args, p.Name)
+		args = append(args, flatpakID(p))
 	}
 	go adapters.StreamCmd(args, op.Writer())
 	return op
@@ -44,14 +44,22 @@ func (a *Adapter) Update(pkgs []domain.Package) *domain.Operation {
 	op := domain.NewOperation()
 	args := []string{"flatpak", "update", "-y"}
 	for _, p := range pkgs {
-		args = append(args, p.Name)
+		args = append(args, flatpakID(p))
 	}
 	go adapters.StreamCmd(args, op.Writer())
 	return op
 }
 
+// flatpakID returns the application ID stored in Path, falling back to Name.
+func flatpakID(p domain.Package) string {
+	if p.Path != "" {
+		return p.Path
+	}
+	return p.Name
+}
+
 func (a *Adapter) Info(pkg domain.Package) (domain.PackageInfo, error) {
-	out, err := adapters.RunCmd([]string{"flatpak", "info", pkg.Name})
+	out, err := adapters.RunCmd([]string{"flatpak", "info", flatpakID(pkg)})
 	if err != nil {
 		return domain.PackageInfo{Package: pkg}, err
 	}
@@ -101,7 +109,8 @@ func parseList(out string) []domain.Package {
 			continue
 		}
 		pkgs = append(pkgs, domain.Package{
-			Name:    strings.TrimSpace(parts[0]),
+			Name:    strings.TrimSpace(parts[0]), // display name
+			Path:    strings.TrimSpace(parts[1]), // application ID (used for operations)
 			Version: strings.TrimSpace(parts[2]),
 			Manager: domain.ManagerFlatpak,
 			Origin:  strings.TrimSpace(parts[3]),

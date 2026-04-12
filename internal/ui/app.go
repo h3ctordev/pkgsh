@@ -132,7 +132,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if strings.Contains(line, "PKGSH_SUDO:") && m.state.Operation != nil {
 			modal := newSudoModal()
 			m.modal = &modal
-			return m, readLineCmd(m.state.Operation)
+			return m, nil // pause scanner — modal will resume it
 		}
 		m.log = m.log.appendLine(line)
 		return m, readLineCmd(m.state.Operation)
@@ -182,6 +182,11 @@ func logCollapseCmd() tea.Cmd {
 func (m AppModel) updateModal(msg tea.Msg) (tea.Model, tea.Cmd) {
 	updated, confirmed, cancelled := m.modal.Update(msg)
 	if cancelled {
+		if m.modal.modalType == ModalSudo && m.state.Operation != nil {
+			m.state.Operation.CloseStdin()
+			m.modal = nil
+			return m, readLineCmd(m.state.Operation)
+		}
 		m.modal = nil
 		return m, nil
 	}
@@ -192,6 +197,7 @@ func (m AppModel) updateModal(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.list = m.list.ClearSelection()
 			m.modal = nil
 
+			// Bloqueo activo: filtrar paquetes del sistema cuando security mode está activo
 			if m.state.SecurityMode {
 				var allowed []domain.Package
 				for _, p := range sel {
@@ -207,6 +213,7 @@ func (m AppModel) updateModal(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 
+			// Agrupar por manager en orden canónico
 			order := []domain.ManagerType{
 				domain.ManagerApt, domain.ManagerSnap, domain.ManagerFlatpak,
 				domain.ManagerDpkg, domain.ManagerPip, domain.ManagerNpm, domain.ManagerAppImage,
@@ -226,6 +233,11 @@ func (m AppModel) updateModal(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 
 		case ModalSudo:
+			if m.state.Operation != nil {
+				m.state.Operation.SendInput(updated.input + "\n")
+				m.modal = nil
+				return m, readLineCmd(m.state.Operation)
+			}
 			m.modal = nil
 			return m, nil
 
@@ -336,9 +348,12 @@ func (m AppModel) updateKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case "s":
 			m.state.SortBy = (m.state.SortBy + 1) % 4
 			m = m.applyFilter()
+
 		case "S":
 			m.state.SecurityMode = !m.state.SecurityMode
 			m = m.applyFilter()
+
+
 		case "d":
 			sel := m.list.AllSelected(m.state.Packages)
 			if len(sel) == 0 {

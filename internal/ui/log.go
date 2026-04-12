@@ -23,6 +23,7 @@ func newLogModel() LogModel {
 }
 
 func (lm LogModel) appendLine(line string) LogModel {
+	// dpkg uses \r to overwrite progress in-place; keep only the last segment.
 	if i := strings.LastIndex(line, "\r"); i >= 0 {
 		line = line[i+1:]
 	}
@@ -115,6 +116,7 @@ func (lm LogModel) View(width, height int, active bool, title string) string {
 		end = len(lm.lines)
 	}
 
+	// inner width = panel width - 2 (border) - 2 (padding) - 1 (margin)
 	maxLineWidth := width - 5
 	if maxLineWidth < 10 {
 		maxLineWidth = 10

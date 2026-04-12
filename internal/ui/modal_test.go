@@ -81,3 +81,17 @@ func TestSudoModal_Backspace(t *testing.T) {
 		t.Errorf("expected 'a' after backspace, got %q", m.input)
 	}
 }
+
+func TestSudoModal_ViewMasksWithAsterisk(t *testing.T) {
+	m := newSudoModal()
+	m, _, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
+	m, _, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
+
+	view := m.View(80)
+	if !strings.Contains(view, "**") {
+		t.Fatalf("expected '**' mask in view, got: %q", view)
+	}
+	if strings.Contains(view, "••") {
+		t.Fatal("expected no bullet mask '••', only '*'")
+	}
+}
