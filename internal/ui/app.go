@@ -468,7 +468,8 @@ func (m AppModel) View() string {
 		return "Iniciando pkgsh..."
 	}
 
-	available := m.height - 8
+	// header(3) + searchBar(2) + selectionBar(1) + bordes lista(2) + bordes log(2) + footer(1) = 11
+	available := m.height - 11
 	if available < 10 {
 		available = 10
 	}
@@ -585,7 +586,7 @@ func (m AppModel) viewHeader(selCount int) string {
 	return lipgloss.NewStyle().
 		Width(m.width).
 		Background(colorHeaderBg).
-		Padding(0, 1).
+		Padding(1, 1).
 		Render(left + strings.Repeat(" ", padding) + statsStyled)
 }
 
@@ -597,7 +598,7 @@ func (m AppModel) viewSearchBar(width int) string {
 	return lipgloss.NewStyle().
 		Width(width - 2).
 		Foreground(colorMuted).
-		Padding(0, 1).
+		Padding(0, 1, 1, 1).
 		Render("> " + query)
 }
 
