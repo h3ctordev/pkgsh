@@ -46,7 +46,8 @@ jobs:
           VERSION=${GITHUB_REF_NAME#v}
           cp pkgsh_linux_amd64 pkgsh
           go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest
-          VERSION=${VERSION} nfpm package --packager deb --target dist/
+          mkdir -p dist/
+          VERSION=${VERSION} nfpm package --packager deb --target dist/pkgsh_${VERSION}_amd64.deb
           mv pkgsh_linux_amd64 pkgsh
 
       - name: Generate checksums
