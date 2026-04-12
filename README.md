@@ -116,6 +116,18 @@ nfpm package --packager deb --target dist/
 
 No se modifica ninguna otra capa.
 
+## Roadmap
+
+Funcionalidades planeadas para versiones futuras:
+
+| Feature | Descripción |
+|---------|-------------|
+| **Búsqueda e instalación** | Buscar paquetes en repositorios remotos (apt, snap, flatpak…) e instalar directamente desde la TUI |
+| **Historial de operaciones** | Log persistente en disco de cada install/remove/update con timestamp y resultado |
+| **Menú de configuración** | Panel de ajustes accesible desde la TUI: gestores activos, comportamiento de SecurityMode, preferencias de UI |
+| **Temas y paletas de color** | Soporte para múltiples temas (GitHub Dark, Dracula, Solarized…) y cambio de paleta en caliente |
+| **Multi-idioma (i18n)** | Interfaz disponible en inglés, español y otros idiomas configurables |
+
 ## Licencia
 
 MIT
