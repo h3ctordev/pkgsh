@@ -9,6 +9,31 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.2.3] - 2026-04-12
+
+### Changed
+- **Dependencias** — `github.com/charmbracelet/bubbletea` 0.26.6 → 1.3.10, `lipgloss` 0.10.0 → 1.1.0, `bubbles` 0.18.0 → 0.20.0, `golang.org/x/term` 0.17.0 → 0.32.0
+
+### Fixed
+- **CI: pin nfpm a v2.43.1** — `nfpm@latest` resuelve a v2.43.2+ que requiere Go >= 1.25; el proyecto usa Go 1.24.0. Fijado a la última versión compatible
+
+---
+
+## [0.2.2] - 2026-04-12
+
+### Added
+- **`CODE_OF_CONDUCT.md`** — Contributor Covenant v2.1 en español
+- **`SECURITY.md`** — política de seguridad real (versiones soportadas, SLA de 72 h, contacto h3ctordev@gmail.com)
+- **`.github/dependabot.yml`** — actualizaciones automáticas semanales para `gomod` y `github-actions`, apuntando a `develop`
+- Descripción y topics del repositorio GitHub
+
+### Fixed
+- **CI: `nfpm --target` requiere ruta de archivo** — nfpm v2.46 eliminó soporte para `--target <dir>`; corregido a `--target dist/pkgsh_amd64.deb` con `mkdir -p dist/`
+- **CI: `mv` borraba el binario antes del checksum** — el paso usaba `mv pkgsh_linux_amd64 pkgsh` y luego `rm pkgsh`, eliminando el binario construido. Corregido a solo `rm pkgsh` (elimina la copia temporal de nfpm)
+- **README: URLs con owner incorrecto** — todas las URLs de instalación usaban `hbustos` en lugar de `h3ctordev`
+
+---
+
 ## [0.2.1] - 2026-04-12
 
 ### Fixed
