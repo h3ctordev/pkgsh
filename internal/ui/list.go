@@ -158,9 +158,9 @@ func (lm ListModel) View(width, height int, active bool) string {
 		innerWidth = 20
 	}
 
-	// Anchos fijos: cursor(2) checkbox(2) sep(2) version(10) sep(2) manager(8) sep(2) size(7) sep(2) tags(7) = 44
-	// nombre = innerWidth - 44, mínimo 10
-	fixedCols := 44
+	// Anchos fijos: cursor(2) checkbox(2) sep(2) version(10) sep(2) manager(8) sep(2) size(7) sep(2) date(10) sep(2) tags(7) = 56
+	// nombre = innerWidth - 56, mínimo 10
+	fixedCols := 56
 	colName := innerWidth - fixedCols
 	if colName < 10 {
 		colName = 10
@@ -168,13 +168,15 @@ func (lm ListModel) View(width, height int, active bool) string {
 	colVer := 10
 	colMgr := 8
 	colSize := 7
+	colDate := 10
 
 	muted := lipgloss.NewStyle().Foreground(colorMuted)
-	header := fmt.Sprintf("    %-*s  %-*s  %-*s  %-*s  %s",
+	header := fmt.Sprintf("    %-*s  %-*s  %-*s  %-*s  %-*s  %s",
 		colName, "Paquete",
 		colVer, "Versión",
 		colMgr, "Gestor",
 		colSize, "Tamaño",
+		colDate, "Instalado",
 		"Est.",
 	)
 	sep := strings.Repeat("─", innerWidth)
@@ -220,9 +222,14 @@ func (lm ListModel) View(width, height int, active bool) string {
 			Foreground(managerColor(pkg.Manager)).
 			Render(truncate(string(pkg.Manager), colMgr))
 		sizeField := fmt.Sprintf("%-*s", colSize, truncate(formatSize(pkg.Size), colSize))
+		dateStr := "—"
+		if !pkg.InstallDate.IsZero() {
+			dateStr = pkg.InstallDate.Format("2006-01-02")
+		}
+		dateField := muted.Render(fmt.Sprintf("%-*s", colDate, dateStr))
 		tagsField := pkgTags(pkg)
 
-		row := cur + " " + coloredCheck + " " + nameField + "  " + verField + "  " + mgrField + "  " + sizeField + "  " + tagsField
+		row := cur + " " + coloredCheck + " " + nameField + "  " + verField + "  " + mgrField + "  " + sizeField + "  " + dateField + "  " + tagsField
 
 		if i == lm.cursor {
 			row = lipgloss.NewStyle().

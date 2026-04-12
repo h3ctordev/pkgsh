@@ -18,7 +18,14 @@ func (a *Adapter) List() ([]domain.Package, error) {
 	if err != nil {
 		return nil, err
 	}
-	return parseList(out), nil
+	pkgs := parseList(out)
+
+	dates := adapters.ParseDpkgLog()
+	for i := range pkgs {
+		pkgs[i].InstallDate = dates[pkgs[i].Name]
+	}
+
+	return pkgs, nil
 }
 
 // Remove es no-op: dpkg es read-only en pkgsh (usar apt para desinstalar).

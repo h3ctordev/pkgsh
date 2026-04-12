@@ -2,6 +2,8 @@ package pip
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/hbustos/pkgsh/internal/adapters"
@@ -22,7 +24,30 @@ func (a *Adapter) List() ([]domain.Package, error) {
 			return nil, err
 		}
 	}
-	return parseList(out)
+	pkgs, err := parseList(out)
+	if err != nil {
+		return nil, err
+	}
+
+	siteOut, _ := adapters.RunCmd([]string{"python3", "-c", "import site; print(site.getsitepackages()[0])"})
+	siteDir := strings.TrimSpace(siteOut)
+	if siteDir != "" {
+		for i := range pkgs {
+			pattern := filepath.Join(siteDir, pkgs[i].Name+"-*.dist-info")
+			matches, _ := filepath.Glob(pattern)
+			if len(matches) == 0 {
+				pattern = filepath.Join(siteDir, strings.ReplaceAll(pkgs[i].Name, "-", "_")+"-*.dist-info")
+				matches, _ = filepath.Glob(pattern)
+			}
+			if len(matches) > 0 {
+				if info, err := os.Stat(matches[0]); err == nil {
+					pkgs[i].InstallDate = info.ModTime()
+				}
+			}
+		}
+	}
+
+	return pkgs, nil
 }
 
 func (a *Adapter) Remove(pkgs []domain.Package) *domain.Operation {
