@@ -1,22 +1,24 @@
-# SECURITY.md
 # Security Policy
 
 ## Supported Versions
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
-
-| Version | Supported          |
-| ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
+| Version | Supported |
+|---------|-----------|
+| 0.2.x   | ✅        |
+| < 0.2   | ❌        |
 
 ## Reporting a Vulnerability
 
-Use this section to tell people how to report a vulnerability.
+Si encuentras una vulnerabilidad de seguridad en pkgsh, **no abras un issue público**.
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+Repórtala de forma privada por correo a:
+
+**[h3ctordev@gmail.com](mailto:h3ctordev@gmail.com)**
+
+Incluye en tu reporte:
+- Descripción del problema y su impacto potencial
+- Pasos para reproducirlo
+- Versión de pkgsh afectada
+- Sistema operativo y versión
+
+Nos comprometemos a responder en un plazo de **72 horas** y a publicar un fix lo antes posible con el crédito correspondiente al reportante si así lo desea.
