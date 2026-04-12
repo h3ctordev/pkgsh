@@ -45,7 +45,7 @@ jobs:
         run: |
           VERSION=${GITHUB_REF_NAME#v}
           cp pkgsh_linux_amd64 pkgsh
-          go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest
+          go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.43.1
           mkdir -p dist/
           VERSION=${VERSION} nfpm package --packager deb --target dist/pkgsh_amd64.deb
           rm pkgsh
