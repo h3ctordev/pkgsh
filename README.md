@@ -23,7 +23,7 @@ Gestor unificado de paquetes para Ubuntu/Debian con interfaz TUI. Abstrae apt, s
 ### Binario estático (recomendado)
 
 ```bash
-curl -L https://github.com/hbustos/pkgsh/releases/latest/download/pkgsh_linux_amd64 -o pkgsh
+curl -L https://github.com/h3ctordev/pkgsh/releases/latest/download/pkgsh_linux_amd64 -o pkgsh
 chmod +x pkgsh
 sudo mv pkgsh /usr/local/bin/
 ```
@@ -31,14 +31,14 @@ sudo mv pkgsh /usr/local/bin/
 ### Paquete .deb
 
 ```bash
-curl -L https://github.com/hbustos/pkgsh/releases/latest/download/pkgsh_amd64.deb -o pkgsh.deb
+curl -L https://github.com/h3ctordev/pkgsh/releases/latest/download/pkgsh_amd64.deb -o pkgsh.deb
 sudo dpkg -i pkgsh.deb
 ```
 
 ### Desde fuente
 
 ```bash
-git clone https://github.com/hbustos/pkgsh.git
+git clone https://github.com/h3ctordev/pkgsh.git
 cd pkgsh
 CGO_ENABLED=0 go build -o pkgsh ./cmd/pkgsh
 sudo mv pkgsh /usr/local/bin/
